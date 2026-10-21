@@ -1,3 +1,9 @@
+from app.api.admin import router as admin_router
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static" if (BASE_DIR / "static").exists() else BASE_DIR.parent / "static"
 from fastapi import WebSocket, WebSocketDisconnect
 from starlette.responses import FileResponse, Response
 import hmac
@@ -38,16 +44,18 @@ def create_app() -> FastAPI:
             ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
                   or (request.client.host if request.client else "?"))
             latency = int((time.perf_counter() - start) * 1000)
+            full_endpoint = request.url.path + (f"?{request.url.query}" if request.url.query else "")
             await usage_repo.add_usage(
-                key_id, request.url.path, response.status_code,
+                key_id, full_endpoint, response.status_code,
                 latency, ip
             )
             for k, v in getattr(request.state, "quota_headers", {}).items():
                 response.headers[k] = v
         return response
 
-    # Routes v1 avec préfixe
+    # Routes v1 avec prefixe
     app.include_router(api_v1, prefix="/v1")
+    app.include_router(admin_router)
     # Routes legacy (/api/*) et WebSocket
     app.include_router(legacy)
     # Fichiers statiques UI
@@ -65,7 +73,7 @@ import hashlib
 async def serve_index(response: Response):
     s = get_settings()
     sig = hmac.new(s.admin_token.encode(), b"brixhub_internal_web_session", hashlib.sha256).hexdigest()
-    res = FileResponse("static/index.html")
+    res = FileResponse(str(STATIC_DIR / "index.html"))
     res.set_cookie(
         key="bx_web_session",
         value=sig,
@@ -104,3 +112,15 @@ async def ws_online_tracker(websocket: WebSocket):
                 await ws.send_json({"online_users": count})
             except Exception:
                 connected_websockets.discard(ws)
+
+@app.get("/api-docs", response_class=FileResponse)
+async def serve_api_docs():
+    return FileResponse(str(STATIC_DIR / "api-docs.html"))
+
+@app.get("/cgu", response_class=FileResponse)
+async def serve_cgu():
+    return FileResponse(str(STATIC_DIR / "cgu.html"))
+
+@app.get("/rgpd", response_class=FileResponse)
+async def serve_rgpd():
+    return FileResponse(str(STATIC_DIR / "rgpd.html"))

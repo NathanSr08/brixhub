@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BrixHub Admin &bull; Connexion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0d14',
+                        surface: '#121824',
+                        card: '#182032',
+                        accent: '#3b82f6'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark text-slate-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-sm sm:max-w-md bg-surface border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600"></div>
+        
+        <div class="text-center space-y-1.5 mb-6">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-xl mx-auto flex items-center justify-center text-white text-lg sm:text-xl font-bold shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-white">Espace Admin</h1>
+            <p class="text-xs text-slate-400">Authentification par Master Token</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-semibold text-slate-400 mb-1.5 uppercase">ADMIN_TOKEN</label>
+                <div class="relative">
+                    <input type="password" id="adminToken" required placeholder="sk_admin_secret_..."
+                           class="w-full px-3.5 py-2.5 bg-dark border border-slate-700 rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:border-blue-500 font-mono pr-10">
+                    <button type="button" onclick="togglePass()" class="absolute right-3 top-3 text-slate-500 hover:text-slate-300">
+                        <i id="eyeIcon" class="fa-solid fa-eye text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="errorMsg" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation"></i> <span>Token invalide.</span>
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30">
+                <span>Déverrouiller</span> <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="mt-6 text-center text-xs text-slate-500">
+            <a href="/" class="hover:text-slate-300 transition"><i class="fa-solid fa-arrow-left mr-1"></i>Retour au moteur</a>
+        </div>
+    </div>
+
+    <script>
+        function togglePass() {
+            const input = document.getElementById('adminToken');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash text-xs';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye text-xs';
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = document.getElementById('adminToken').value.trim();
+            const btn = document.getElementById('submitBtn');
+            const err = document.getElementById('errorMsg');
+            
+            err.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            try {
+                const res = await fetch('/admin/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+                if (res.ok) window.location.href = '/admin';
+                else err.classList.remove('hidden');
+            } catch (error) {
+                err.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Déverrouiller</span> <i class="fa-solid fa-arrow-right"></i>';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -2,225 +2,278 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <!-- 1. Titre et Description pour les moteurs de recherche (SEO standard) -->
     <title>Recherche Centralisée | Moteur d'investigation multi-sources</title>
     <meta name="description" content="Plateforme d'indexation et d'investigation OSINT unifiée. Croisez les identités, numéros de téléphone, adresses et emails à travers des millions de données indexées.">
-    <meta name="keywords" content="recherche centralisée, osint, base de données, recherche email, numéro de téléphone, investigation, leak">
     <meta name="robots" content="index, follow">
 
-    <!-- 2. Favicon (Logo affiché dans l'onglet du navigateur) -->
     <link rel="icon" type="image/x-icon" href="/static/og-banner.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/og-banner.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/og-banner.png">
-
-    <!-- 3. Aperçu sur Telegram, Discord, Facebook (Open Graph) -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Recherche Centralisée — Un critère. Tout ce qui a fuité.">
-    <meta property="og:description" content="Recherchez et croisez instantanément des données unifiées multi-sources.">
-    <meta property="og:image" content="/static/og-banner.png">
-
-    <!-- 4. Aperçu sur X / Twitter -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Recherche Centralisée">
-    <meta name="twitter:description" content="Recherchez et croisez instantanément des données unifiées multi-sources.">
-    <meta name="twitter:image" content="/static/og-banner.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
             background-color: #0b0f19;
             color: #e2e8f0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow-x: hidden;
         }
-        .card-bg {
-            background-color: #111827;
-            border: 1px solid #1f293d;
-        }
-        .subcard-bg {
-            background-color: #0d1322;
-            border: 1px solid #1a2333;
-        }
-        .input-bg {
-            background-color: #0b0f19;
-            border: 1px solid #243048;
-        }
-        .input-bg:focus {
-            border-color: #6366f1;
-            outline: none;
-            box-shadow: 0 0 0 1px #6366f1;
-        }
-        .custom-scroll::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scroll::-webkit-scrollbar-track {
-            background: rgba(17, 24, 39, 0.6);
-            border-radius: 8px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-            background: #374151;
-            border-radius: 8px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb:hover {
-            background: #4b5563;
-        }
+        .card-bg { background-color: #111827; border: 1px solid #1f293d; }
+        .subcard-bg { background-color: #0d1322; border: 1px solid #1a2333; }
+        .input-bg { background-color: #0b0f19; border: 1px solid #243048; }
+        .input-bg:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 1px #6366f1; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(17, 24, 39, 0.6); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
     </style>
 </head>
-<body class="min-h-screen py-10 px-4 flex flex-col items-center relative">
+<body class="min-h-screen py-6 px-3 sm:px-6 flex flex-col items-center relative">
 
-    <!-- Compteur Utilisateurs Connectés en Temps Réel -->
-    <div class="fixed top-4 left-4 z-40">
-        <div class="flex items-center space-x-2 bg-gray-900/95 border border-emerald-500/30 px-3.5 py-1.5 rounded-full shadow-lg backdrop-blur-md select-none">
+    <!-- Badges Fixes Header Responsive (Flex-wrap sur mobile) -->
+    <div class="w-full max-w-4xl flex items-center justify-between mb-4 z-40 px-1">
+        <!-- Compteur En Ligne -->
+        <div class="flex items-center space-x-2 bg-gray-900/95 border border-emerald-500/30 px-3 py-1 rounded-full shadow-lg backdrop-blur-md select-none text-[11px]">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-xs text-gray-300 font-medium">En ligne :</span>
-            <span id="badgeOnlineCount" class="text-xs font-bold font-mono text-emerald-300">1</span>
+            <span class="text-gray-300 font-medium">En ligne :</span>
+            <span id="badgeOnlineCount" class="font-bold font-mono text-emerald-300">1</span>
+        </div>
+
+        <!-- Bulle Stats Base -->
+        <div id="statsContainer" class="relative">
+            <button id="btnStatsToggle" onclick="toggleStatsPopup(event)" type="button" class="flex items-center space-x-1.5 bg-gray-900/95 border border-indigo-500/40 hover:border-indigo-400 px-3 py-1 rounded-full shadow-lg backdrop-blur-md cursor-pointer transition select-none text-[11px]">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-gray-300 font-medium">Base :</span>
+                <span id="badgeTotalRecords" class="font-bold font-mono text-indigo-300">...</span>
+                <span class="text-[9px] text-gray-500">▼</span>
+            </button>
+
+            <div id="statsPopover" class="hidden absolute right-0 top-full mt-2 w-72 sm:w-80 bg-[#0e1626] border border-gray-700/80 rounded-2xl shadow-2xl p-4 z-50">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-2 mb-3">
+                    <span class="text-xs font-semibold text-white tracking-wide">Volume des données</span>
+                    <span id="popoverTotal" class="text-xs font-mono font-bold text-emerald-400">0</span>
+                </div>
+                <div id="sourcesStatsList" class="custom-scroll space-y-2 max-h-80 overflow-y-auto pr-1 text-xs">
+                    <p class="text-gray-500 text-center py-2">Chargement...</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Bulle de statistiques (Verrouillable au clic) -->
-    <div id="statsContainer" class="fixed top-4 right-4 z-40">
-        <button id="btnStatsToggle" onclick="toggleStatsPopup(event)" type="button" class="flex items-center space-x-2 bg-gray-900/95 border border-indigo-500/40 hover:border-indigo-400 px-3.5 py-1.5 rounded-full shadow-lg backdrop-blur-md cursor-pointer transition select-none">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-xs text-gray-300 font-medium">Base :</span>
-            <span id="badgeTotalRecords" class="text-xs font-bold font-mono text-indigo-300">...</span>
-            <span class="text-[10px] text-gray-500 ml-1">▼</span>
-        </button>
-
-        <div id="statsPopover" class="hidden absolute right-0 top-full mt-2 w-80 bg-[#0e1626] border border-gray-700/80 rounded-2xl shadow-2xl p-4 z-50">
-            <div class="flex items-center justify-between border-b border-gray-800 pb-2 mb-3">
-                <span class="text-xs font-semibold text-white tracking-wide">Volume des données</span>
-                <span id="popoverTotal" class="text-xs font-mono font-bold text-emerald-400">0</span>
-            </div>
-            <div id="sourcesStatsList" class="custom-scroll space-y-2.5 max-h-96 overflow-y-auto pr-2 text-xs">
-                <p class="text-gray-500 text-center py-2">Chargement...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- En-tête -->
-    <div class="text-center mb-6">
-        <p class="text-xs font-semibold tracking-widest text-indigo-400 uppercase mb-2">RECHERCHE CENTRALISÉE</p>
-        <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white mb-2">Un critère. Tout ce qui a fuité.</h1>
-        <p class="text-sm text-gray-400">Recherchez dans les données unifiées et indexées.</p>
+    <!-- Titre -->
+    <div class="text-center mb-6 px-2">
+        <p class="text-[10px] sm:text-xs font-semibold tracking-widest text-indigo-400 uppercase mb-1">RECHERCHE CENTRALISÉE</p>
+        <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-1.5">Un critère. Tout ce qui a fuité.</h1>
+        <p class="text-xs sm:text-sm text-gray-400">Recherchez dans les données unifiées et indexées.</p>
     </div>
 
     <!-- Bannière Telegram -->
     <div class="w-full max-w-4xl mb-6">
-        <div class="bg-[#0b1419]/90 border border-emerald-900/60 rounded-xl px-5 py-3 shadow-lg flex items-center justify-center text-center">
-            <p class="text-xs md:text-sm text-gray-300">
-                Pour toute demande de supression, merci de faire votre demande par Telegram à
-                <a href="https://t.me/leakfrench" target="_blank" rel="noopener noreferrer" class="font-bold text-emerald-400 hover:text-emerald-300 ml-1 underline underline-offset-4 decoration-emerald-500/50 hover:decoration-emerald-300 transition">
+        <div class="bg-[#0b1419]/90 border border-emerald-900/60 rounded-xl px-4 py-2.5 shadow-lg flex items-center justify-center text-center">
+            <p class="text-xs text-gray-300">
+                Demande de suppression :
+                <a href="https://t.me/leakfrench" target="_blank" rel="noopener noreferrer" class="font-bold text-emerald-400 hover:text-emerald-300 ml-1 underline transition">
                     @leakfrench
                 </a>
             </p>
         </div>
     </div>
 
-    <!-- Boîte principale -->
-    <div class="w-full max-w-4xl card-bg rounded-2xl p-6 shadow-2xl">
-        <h2 class="text-base font-semibold text-white mb-1">Critères de recherche</h2>
-        <p class="text-xs text-gray-400 mb-6">Remplissez un ou plusieurs champs, puis lancez la recherche.</p>
+    <!-- BANDEAU SERVICE SUPPRESSION RESPONSIVE -->
+    <div id="gdprRemovalBanner" class="w-full max-w-4xl mb-6 transition-all duration-300">
+        <div class="relative bg-gradient-to-b from-[#131b2e]/95 to-[#0b101d]/95 backdrop-blur-xl border border-blue-500/30 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-2xl overflow-hidden">
+            
+            <button onclick="dismissRemovalBanner()" type="button" title="Fermer" 
+                    class="absolute top-3 right-3 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full w-7 h-7 flex items-center justify-center text-xs transition z-20">
+                ✕
+            </button>
+
+            <div class="pr-6 mb-5">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium mb-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Nettoyage d'Empreinte Express
+                </div>
+                <h3 class="text-lg sm:text-2xl font-black text-white tracking-tight">Vos données apparaissent dans nos bases ?</h3>
+                <p class="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
+                    Déréférencement définitif et blacklistage immédiat de vos coordonnées de toutes les corrélations.
+                </p>
+            </div>
+
+            <!-- Grille Mobile 1 Col / Desktop 3 Cols -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                
+                <!-- 10€ -->
+                <div class="bg-[#0e1424]/90 border border-slate-800 p-4 rounded-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-slate-400 uppercase">Fiche Unique</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 font-mono">Retrait 2h</span>
+                        </div>
+                        <div class="mt-2 flex items-baseline gap-1">
+                            <span class="text-2xl sm:text-3xl font-black text-white">10 €</span>
+                            <span class="text-xs text-slate-400">/ fiche</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Suppression immédiate d'une ligne ou d'un numéro précis.</p>
+                    </div>
+                    <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20supprimer%201%20fiche%20(10€)" target="_blank"
+                       class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center rounded-lg transition border border-slate-700 block">
+                        Supprimer 1 entrée
+                    </a>
+                </div>
+
+                <!-- 25€ -->
+                <div class="relative bg-gradient-to-b from-[#16223b] to-[#10192e] border-2 border-blue-500 p-4 rounded-xl flex flex-col justify-between shadow-lg shadow-blue-500/10">
+                    <span class="absolute -top-2.5 right-3 bg-blue-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full">Recommandé</span>
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-blue-400 uppercase">Pack Identité</span>
+                            <span class="px-2 py-0.5 rounded bg-blue-500/20 text-[10px] text-blue-300 font-mono">5 Fiches</span>
+                        </div>
+                        <div class="mt-2 flex items-baseline gap-1">
+                            <span class="text-2xl sm:text-3xl font-black text-white">25 €</span>
+                            <span class="text-xs text-blue-300">/ identité</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 mt-1">Purge intégrale de toutes vos variantes (tél, adresses, emails liés).</p>
+                    </div>
+                    <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20le%20Pack%20Identité%20(25€)" target="_blank"
+                       class="mt-4 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold text-center rounded-lg transition shadow-md shadow-blue-600/30 block">
+                        Nettoyer mon Identité
+                    </a>
+                </div>
+
+                <!-- 49€ -->
+                <div class="bg-[#0e1424]/90 border border-slate-800 p-4 rounded-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-purple-400 uppercase">Wipeout + Veille</span>
+                            <span class="px-2 py-0.5 rounded bg-purple-500/10 text-[10px] text-purple-300 font-mono">6 Mois</span>
+                        </div>
+                        <div class="mt-2 flex items-baseline gap-1">
+                            <span class="text-2xl sm:text-3xl font-black text-white">49 €</span>
+                            <span class="text-xs text-slate-400">/ complet</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Suppression totale + surveillance et blacklistage 6 mois.</p>
+                    </div>
+                    <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20le%20Pack%20Wipeout%20(49€)" target="_blank"
+                       class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center rounded-lg transition border border-slate-700 block">
+                        Wipeout & Veille 6 Mois
+                    </a>
+                </div>
+
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
+                <span>✔ Crypto &bull; Anonymat garanti &bull; Traitement direct</span>
+                <a href="/rgpd" class="text-blue-400 hover:underline">Procédure légale gratuite (30j) &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Boîte principale Formulaire -->
+    <div class="w-full max-w-4xl card-bg rounded-2xl p-4 sm:p-6 shadow-2xl">
+        <h2 class="text-sm sm:text-base font-semibold text-white mb-0.5">Critères de recherche</h2>
+        <p class="text-xs text-gray-400 mb-4 sm:mb-6">Remplissez un ou plusieurs champs.</p>
 
         <!-- Recherche Globale -->
-        <div class="subcard-bg rounded-xl p-4 mb-4 border border-indigo-900/40">
-            <label class="flex items-center text-xs font-medium text-indigo-300 mb-2">
-                <span class="mr-2">⚡</span> Recherche Globale (Nom, Prénom inversé, Email, etc.)
+        <div class="subcard-bg rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 border border-indigo-900/40">
+            <label class="flex items-center text-xs font-medium text-indigo-300 mb-1.5">
+                <span class="mr-1.5">⚡</span> Recherche Globale (Nom, Prénom, Email, etc.)
             </label>
-            <input type="text" id="q" placeholder="Ex : Martin Dupont, ou mot-clé..." class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+            <input type="text" id="q" placeholder="Ex : Martin Dupont, ou mot-clé..." class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
         </div>
 
-        <!-- Groupe Source -->
-        <div class="subcard-bg rounded-xl p-4 mb-4">
-            <label class="flex items-center text-xs font-medium text-gray-300 mb-2">
-                <span class="mr-2">🛰️</span> Source de données
+        <!-- Source -->
+        <div class="subcard-bg rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
+            <label class="flex items-center text-xs font-medium text-gray-300 mb-1.5">
+                <span class="mr-1.5">🛰️</span> Source de données
             </label>
-            <select id="source" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+            <select id="source" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 <option value="ALL">Toutes les sources</option>
             </select>
         </div>
 
-        <!-- Groupe Identité & Naissance -->
-        <div class="subcard-bg rounded-xl p-4 mb-4">
-            <label class="flex items-center text-xs font-medium text-gray-300 mb-3">
-                <span class="mr-2">👤</span> Identité & Naissance
+        <!-- Identité & Naissance -->
+        <div class="subcard-bg rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
+            <label class="flex items-center text-xs font-medium text-gray-300 mb-2">
+                <span class="mr-1.5">👤</span> Identité & Naissance
             </label>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3">
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Nom de famille</label>
-                    <input type="text" id="nom" placeholder="Ex : DUPONT" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <label class="block text-[10px] text-gray-400 mb-1">Nom</label>
+                    <input type="text" id="nom" placeholder="Ex : DUPONT" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Prénom</label>
-                    <input type="text" id="prenom" placeholder="Ex : Alexandre" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <label class="block text-[10px] text-gray-400 mb-1">Prénom</label>
+                    <input type="text" id="prenom" placeholder="Ex : Alexandre" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2 border-t border-gray-800/60">
-                <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Date complète</label>
-                    <input type="text" id="date_naissance" placeholder="Ex : 15/04/1988" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-800/60">
+                <div class="col-span-2 sm:col-span-1">
+                    <label class="block text-[10px] text-gray-400 mb-1">Date complète</label>
+                    <input type="text" id="date_naissance" placeholder="15/04/1988" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Jour (JJ)</label>
-                    <input type="text" id="jour" placeholder="Ex : 15" maxlength="2" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <label class="block text-[10px] text-gray-400 mb-1">Jour (JJ)</label>
+                    <input type="text" id="jour" placeholder="15" maxlength="2" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Mois (MM)</label>
-                    <input type="text" id="mois" placeholder="Ex : 04" maxlength="2" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <label class="block text-[10px] text-gray-400 mb-1">Mois (MM)</label>
+                    <input type="text" id="mois" placeholder="04" maxlength="2" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Année (AAAA)</label>
-                    <input type="text" id="annee" placeholder="Ex : 1988" maxlength="4" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <label class="block text-[10px] text-gray-400 mb-1">Année (AAAA)</label>
+                    <input type="text" id="annee" placeholder="1988" maxlength="4" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
             </div>
         </div>
 
-        <!-- Groupe Localisation & Contact -->
-        <div class="subcard-bg rounded-xl p-4 mb-6">
-            <label class="flex items-center text-xs font-medium text-gray-300 mb-3">
-                <span class="mr-2">📍</span> Localisation & Contact
+        <!-- Localisation & Contact -->
+        <div class="subcard-bg rounded-xl p-3 sm:p-4 mb-5">
+            <label class="flex items-center text-xs font-medium text-gray-300 mb-2">
+                <span class="mr-1.5">📍</span> Localisation & Contact
             </label>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Code Postal</label>
-                    <input type="text" id="code_postal" placeholder="Ex : 75008" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <label class="block text-[10px] text-gray-400 mb-1">Code Postal</label>
+                    <input type="text" id="code_postal" placeholder="75008" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Ville</label>
-                    <input type="text" id="ville" placeholder="Ex : Lyon" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <label class="block text-[10px] text-gray-400 mb-1">Ville</label>
+                    <input type="text" id="ville" placeholder="Lyon" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Téléphone (MSISDN)</label>
-                    <input type="text" id="tel" placeholder="Ex : 0612345678" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <label class="block text-[10px] text-gray-400 mb-1">Téléphone</label>
+                    <input type="text" id="tel" placeholder="0612345678" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Email</label>
-                    <input type="text" id="mail" placeholder="Ex : contact@domaine.fr" class="w-full input-bg rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <label class="block text-[10px] text-gray-400 mb-1">Email</label>
+                    <input type="text" id="mail" placeholder="contact@domaine.fr" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
                 </div>
             </div>
         </div>
 
         <!-- Actions -->
-        <div class="flex items-center space-x-3">
-            <button id="btnSearch" onclick="runSearch()" class="flex items-center bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition duration-200 shadow-md">
-                <span class="mr-2">🔍</span> Rechercher
+        <div class="flex items-center gap-3">
+            <button id="btnSearch" onclick="runSearch()" class="flex-1 sm:flex-initial flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-medium px-6 py-2.5 rounded-lg transition shadow-md">
+                <span class="mr-1.5">🔍</span> Rechercher
             </button>
-            <button onclick="clearFields()" class="border border-gray-700 hover:bg-gray-800 text-gray-300 text-sm font-medium px-5 py-2.5 rounded-lg transition duration-200">
+            <button onclick="clearFields()" class="border border-gray-700 hover:bg-gray-800 text-gray-300 text-xs sm:text-sm font-medium px-4 py-2.5 rounded-lg transition">
                 Effacer
             </button>
-            <span id="loading" class="text-xs text-indigo-400 hidden animate-pulse">Recherche en cours...</span>
+            <span id="loading" class="text-xs text-indigo-400 hidden animate-pulse">Recherche...</span>
         </div>
     </div>
 
-    <!-- Tableau de résultats -->
-    <div id="resultsWrapper" class="w-full max-w-6xl mt-8 hidden">
-        <div class="flex justify-between items-center mb-3">
-            <h3 class="text-sm font-semibold text-gray-300">Résultats trouvés : <span id="count" class="text-indigo-400 font-bold">0</span> <span class="text-xs text-gray-500 font-normal ml-2">(Cliquez sur une ligne pour l'analyse croisée et la famille)</span></h3>
+    <!-- Résultats avec Scroll Horizontal Tactile -->
+    <div id="resultsWrapper" class="w-full max-w-6xl mt-6 hidden">
+        <div class="flex justify-between items-center mb-2 px-1">
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-300">
+                Résultats : <span id="count" class="text-indigo-400 font-bold">0</span>
+            </h3>
+            <span class="text-[10px] text-gray-500 sm:block hidden">Glissez horizontalement pour voir toutes les colonnes</span>
         </div>
-        <div class="card-bg rounded-xl overflow-x-auto border border-gray-800">
-            <table class="w-full text-left text-xs">
+        <div class="card-bg rounded-xl overflow-x-auto custom-scroll border border-gray-800">
+            <table class="w-full text-left text-xs whitespace-nowrap min-w-[700px]">
                 <thead class="bg-[#0e1626] text-gray-400 border-b border-gray-800 uppercase tracking-wider text-[10px]">
                     <tr>
                         <th class="p-3">Source</th>
@@ -238,76 +291,90 @@
         </div>
     </div>
 
-    <!-- MODALE ENRICHIE : JSON + MÊME PERSONNE + FAMILLE -->
-    <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="card-bg w-full max-w-4xl rounded-2xl border border-gray-700 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            <!-- Entête Modale -->
-            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-[#0e1626]">
-                <div class="flex items-center space-x-3">
-                    <span class="text-indigo-400 text-xl">🧠</span>
+    <!-- MODALE RESPONSIVE -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+        <div class="card-bg w-full max-w-4xl rounded-2xl border border-gray-700 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div class="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-800 bg-[#0e1626]">
+                <div class="flex items-center space-x-2">
+                    <span class="text-indigo-400 text-lg">🧠</span>
                     <div>
-                        <h3 id="modalTitle" class="text-sm font-bold text-white tracking-wide">Fiche & Analyse Croisée</h3>
-                        <p class="text-[11px] text-gray-400" id="modalSubtitle">Recherche automatique de correspondances multi-sources</p>
+                        <h3 id="modalTitle" class="text-xs sm:text-sm font-bold text-white tracking-wide">Fiche & Analyse</h3>
+                        <p class="text-[10px] text-gray-400" id="modalSubtitle">-</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button id="btnCopyJson" onclick="copyModalJson()" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg border border-gray-700 transition">
-                        Copier JSON
+                    <button id="btnCopyJson" onclick="copyModalJson()" class="text-[11px] bg-gray-800 text-gray-300 px-2.5 py-1 rounded border border-gray-700">
+                        Copier
                     </button>
-                    <button onclick="closeModal()" class="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition text-lg leading-none">
-                        ✕
-                    </button>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-white p-1 text-lg">✕</button>
                 </div>
             </div>
 
-            <!-- Onglets d'analyse -->
-            <div class="flex border-b border-gray-800 bg-[#0a0f1d] px-6 text-xs font-medium">
-                <button onclick="switchModalTab('matches')" id="tabBtnMatches" class="py-3 px-4 border-b-2 border-indigo-500 text-indigo-400 font-semibold transition flex items-center">
-                    Même Personne (Autres Sources) <span id="badgeMatchesCount" class="ml-2 bg-indigo-950 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-indigo-800">0</span>
+            <!-- Onglets Mobile -->
+            <div class="flex border-b border-gray-800 bg-[#0a0f1d] px-3 sm:px-6 text-xs font-medium overflow-x-auto custom-scroll whitespace-nowrap">
+                <button onclick="switchModalTab('matches')" id="tabBtnMatches" class="py-2.5 px-3 border-b-2 border-indigo-500 text-indigo-400 font-semibold">
+                    Même Personne <span id="badgeMatchesCount" class="ml-1 bg-indigo-950 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded-full">0</span>
                 </button>
-                <button onclick="switchModalTab('family')" id="tabBtnFamily" class="py-3 px-4 border-b-2 border-transparent text-gray-400 hover:text-gray-200 transition flex items-center">
-                    Foyer / Famille <span id="badgeFamilyCount" class="ml-2 bg-emerald-950 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full border border-emerald-800">0</span>
+                <button onclick="switchModalTab('family')" id="tabBtnFamily" class="py-2.5 px-3 border-b-2 border-transparent text-gray-400">
+                    Foyer / Famille <span id="badgeFamilyCount" class="ml-1 bg-emerald-950 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded-full">0</span>
                 </button>
-                <button onclick="switchModalTab('raw')" id="tabBtnRaw" class="py-3 px-4 border-b-2 border-transparent text-gray-400 hover:text-gray-200 transition">
+                <button onclick="switchModalTab('raw')" id="tabBtnRaw" class="py-2.5 px-3 border-b-2 border-transparent text-gray-400">
                     Données Brutes (JSON)
                 </button>
             </div>
 
-            <!-- Contenu des onglets -->
-            <div class="p-6 overflow-y-auto bg-[#070b13] flex-1 custom-scroll">
-                <!-- Onglet 1 : Correspondances même personne -->
+            <div class="p-3 sm:p-6 overflow-y-auto bg-[#070b13] flex-1 custom-scroll text-xs">
                 <div id="tabContentMatches" class="space-y-3">
-                    <div id="matchesLoading" class="text-center py-8 text-gray-400 text-xs animate-pulse">
-                        Calcul des scores de corrélation multi-sources en cours...
-                    </div>
-                    <div id="matchesList" class="space-y-3 hidden"></div>
+                    <div id="matchesLoading" class="text-center py-6 text-gray-400 animate-pulse">Calcul des scores...</div>
+                    <div id="matchesList" class="space-y-2.5 hidden"></div>
                 </div>
-
-                <!-- Onglet 2 : Famille / Foyer -->
                 <div id="tabContentFamily" class="space-y-3 hidden">
-                    <div id="familyList" class="space-y-3"></div>
+                    <div id="familyList" class="space-y-2.5"></div>
                 </div>
-
-                <!-- Onglet 3 : JSON brut -->
                 <div id="tabContentRaw" class="hidden">
-                    <pre id="modalJsonContent" class="text-xs font-mono text-emerald-400 whitespace-pre-wrap break-all leading-relaxed"></pre>
+                    <pre id="modalJsonContent" class="text-[11px] font-mono text-emerald-400 whitespace-pre-wrap break-all leading-relaxed"></pre>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Footer Mobile First -->
+    <footer class="w-full border-t border-slate-800/80 bg-surface/40 backdrop-blur py-6 mt-12 text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div class="flex items-center gap-2">
+                <div class="w-5 h-5 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-[10px]">B</div>
+                <span>&copy; 2026 BrixHub OSINT</span>
+            </div>
+            <div class="flex flex-wrap justify-center gap-4 text-[11px]">
+                <a href="/api-docs" class="text-slate-400 hover:text-white">API & Tarifs</a>
+                <a href="/cgu" class="hover:text-slate-400">CGU</a>
+                <a href="/rgpd" class="hover:text-slate-400">RGPD</a>
+                <a href="https://t.me/leakfrench" target="_blank" class="text-blue-400">Telegram</a>
+            </div>
+        </div>
+    </footer>
+
     <script>
         let currentResults = [];
 
-        // --- GESTION DU WEBSOCKET (UTILISATEURS EN LIGNE) ---
+        function dismissRemovalBanner() {
+            const el = document.getElementById('gdprRemovalBanner');
+            if (el) {
+                el.style.display = 'none';
+                sessionStorage.setItem('hide_removal_banner', 'true');
+            }
+        }
+        if (sessionStorage.getItem('hide_removal_banner') === 'true') {
+            const el = document.getElementById('gdprRemovalBanner');
+            if (el) el.style.display = 'none';
+        }
+
         function initOnlineTracker() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/online`;
             let socket;
-
             function connect() {
                 socket = new WebSocket(wsUrl);
-
                 socket.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
@@ -315,37 +382,24 @@
                             const badge = document.getElementById('badgeOnlineCount');
                             if (badge) badge.textContent = data.online_users;
                         }
-                    } catch (err) {
-                        console.error("Erreur parsing WebSocket:", err);
-                    }
+                    } catch (err) {}
                 };
-
-                socket.onclose = () => {
-                    setTimeout(connect, 3000);
-                };
-
-                socket.onerror = () => {
-                    socket.close();
-                };
+                socket.onclose = () => setTimeout(connect, 3000);
+                socket.onerror = () => socket.close();
             }
-
             connect();
         }
         initOnlineTracker();
 
-        // --- STATS ET SOURCES ---
         function toggleStatsPopup(event) {
             event.stopPropagation();
-            const popover = document.getElementById('statsPopover');
-            popover.classList.toggle('hidden');
+            document.getElementById('statsPopover').classList.toggle('hidden');
         }
 
         document.addEventListener('click', (e) => {
             const container = document.getElementById('statsContainer');
             const popover = document.getElementById('statsPopover');
-            if (popover && !container.contains(e.target)) {
-                popover.classList.add('hidden');
-            }
+            if (popover && !container.contains(e.target)) popover.classList.add('hidden');
         });
 
         const KNOWN_COLORS = {
@@ -366,9 +420,7 @@
                 return `background-color: ${c.bg}; color: ${c.text}; border: 1px solid ${c.border};`;
             }
             let hash = 0;
-            for (let i = 0; i < sourceName.length; i++) {
-                hash = sourceName.charCodeAt(i) + ((hash << 5) - hash);
-            }
+            for (let i = 0; i < sourceName.length; i++) hash = sourceName.charCodeAt(i) + ((hash << 5) - hash);
             const hue = Math.abs(hash * 137) % 360;
             return `background-color: hsla(${hue}, 75%, 50%, 0.18); color: hsl(${hue}, 85%, 75%); border: 1px solid hsl(${hue}, 70%, 45%);`;
         }
@@ -397,21 +449,15 @@
 
                 stats.by_source.forEach(item => {
                     const row = document.createElement('div');
-                    row.className = "flex items-center justify-between py-1.5 border-b border-gray-800/60 last:border-0";
+                    row.className = "flex items-center justify-between py-1 border-b border-gray-800/60 last:border-0";
                     const badgeStyle = getBadgeStyle(item.source);
                     row.innerHTML = `
-                        <span style="${badgeStyle}" class="px-2 py-0.5 rounded text-[11px] font-mono">
-                            ${item.source}
-                        </span>
-                        <span class="font-mono text-gray-300 font-medium">
-                            ${Number(item.count).toLocaleString('fr-FR')}
-                        </span>
+                        <span style="${badgeStyle}" class="px-2 py-0.5 rounded text-[10px] font-mono">${item.source}</span>
+                        <span class="font-mono text-gray-300 font-medium">${Number(item.count).toLocaleString('fr-FR')}</span>
                     `;
                     listContainer.appendChild(row);
                 });
-
             } catch (err) {
-                console.error("Erreur stats/sources:", err);
                 document.getElementById('badgeTotalRecords').textContent = "Erreur";
             }
         }
@@ -431,12 +477,11 @@
                 const val = document.getElementById(id).value.trim();
                 if (val) params.append(id, val);
             });
-
             const src = document.getElementById('source').value;
             if (src && src !== 'ALL') params.append('source', src);
 
             if (!params.toString()) {
-                alert("Veuillez renseigner au moins un critère de recherche.");
+                alert("Veuillez renseigner au moins un critère.");
                 return;
             }
 
@@ -447,7 +492,7 @@
                 currentResults = data;
                 renderResults(data);
             } catch (err) {
-                alert("Erreur lors de la requête : " + err.message);
+                alert("Erreur réseau");
             } finally {
                 document.getElementById('loading').classList.add('hidden');
             }
@@ -474,28 +519,24 @@
                     dDisplay = `${item['jour de naissance'] || '??'}/${item['mois de naissance'] || '??'}/${item['annee de naissance']}`;
                 }
 
-                const sourceLabel = item.source || '-';
-                const badgeStyle = getBadgeStyle(item.source);
-
                 tr.innerHTML = `
-                    <td class="p-3">
-                        <span style="${badgeStyle}" class="px-2 py-0.5 rounded text-[11px] font-mono whitespace-nowrap">
-                            ${sourceLabel}
+                    <td class="p-2.5 sm:p-3">
+                        <span style="${getBadgeStyle(item.source)}" class="px-2 py-0.5 rounded text-[10px] font-mono">
+                            ${item.source || '-'}
                         </span>
                     </td>
-                    <td class="p-3 font-semibold text-white whitespace-nowrap group-hover:text-indigo-300 transition">${item.Nom || ''} ${item.Prenom || ''}</td>
-                    <td class="p-3 font-mono whitespace-nowrap">${dDisplay || '-'}</td>
-                    <td class="p-3 font-mono text-emerald-400 whitespace-nowrap">${item['numero de tel'] || '-'}</td>
-                    <td class="p-3 text-gray-400">${item.mail || '-'}</td>
-                    <td class="p-3">${item.adresse || ''} ${item.ville ? '(' + item.ville + ')' : ''}</td>
-                    <td class="p-3 font-mono text-yellow-500/90 whitespace-nowrap">${item.iban || '-'}</td>
-                    <td class="p-3 font-mono text-gray-300 whitespace-nowrap">${item.bic || '-'}</td>
+                    <td class="p-2.5 sm:p-3 font-semibold text-white group-hover:text-indigo-300 transition">${item.Nom || ''} ${item.Prenom || ''}</td>
+                    <td class="p-2.5 sm:p-3 font-mono">${dDisplay || '-'}</td>
+                    <td class="p-2.5 sm:p-3 font-mono text-emerald-400">${item['numero de tel'] || '-'}</td>
+                    <td class="p-2.5 sm:p-3 text-gray-400">${item.mail || '-'}</td>
+                    <td class="p-2.5 sm:p-3">${item.adresse || ''} ${item.ville ? '(' + item.ville + ')' : ''}</td>
+                    <td class="p-2.5 sm:p-3 font-mono text-yellow-500/90">${item.iban || '-'}</td>
+                    <td class="p-2.5 sm:p-3 font-mono text-gray-300">${item.bic || '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // --- GESTION DE LA MODALE & ANALYSE CROISÉE ---
         function switchModalTab(tab) {
             ['Matches', 'Family', 'Raw'].forEach(t => {
                 document.getElementById(`tabContent${t}`).classList.add('hidden');
@@ -517,23 +558,17 @@
         }
 
         function getScoreBadge(score) {
-            if (score >= 80) return `<span class="bg-emerald-950/80 border border-emerald-500 text-emerald-300 font-bold px-2 py-0.5 rounded text-[11px] font-mono">${score}% Fiabilité Très Haute</span>`;
-            if (score >= 60) return `<span class="bg-amber-950/80 border border-amber-500 text-amber-300 font-bold px-2 py-0.5 rounded text-[11px] font-mono">${score}% Probabilité Élevée</span>`;
-            return `<span class="bg-blue-950/80 border border-blue-500 text-blue-300 font-bold px-2 py-0.5 rounded text-[11px] font-mono">${score}% Piste Possible</span>`;
+            if (score >= 80) return `<span class="bg-emerald-950/80 border border-emerald-500 text-emerald-300 font-bold px-1.5 py-0.5 rounded text-[10px] font-mono">${score}% Fiable</span>`;
+            if (score >= 60) return `<span class="bg-amber-950/80 border border-amber-500 text-amber-300 font-bold px-1.5 py-0.5 rounded text-[10px] font-mono">${score}% Élevé</span>`;
+            return `<span class="bg-blue-950/80 border border-blue-500 text-blue-300 font-bold px-1.5 py-0.5 rounded text-[10px] font-mono">${score}% Piste</span>`;
         }
 
         async function openModal(target) {
-            let record;
-            if (typeof target === 'number') {
-                record = currentResults[target];
-            } else if (typeof target === 'object' && target !== null) {
-                record = target;
-            }
-
+            let record = typeof target === 'number' ? currentResults[target] : target;
             if (!record) return;
 
-            document.getElementById('modalTitle').textContent = `${record.Nom || ''} ${record.Prenom || ''}`.trim() || "Fiche Personne";
-            document.getElementById('modalSubtitle').textContent = `Source d'origine : ${record.source || 'Inconnue'}`;
+            document.getElementById('modalTitle').textContent = `${record.Nom || ''} ${record.Prenom || ''}`.trim() || "Fiche";
+            document.getElementById('modalSubtitle').textContent = `Source : ${record.source || 'Inconnue'}`;
             document.getElementById('modalJsonContent').textContent = JSON.stringify(record, null, 2);
 
             switchModalTab('matches');
@@ -541,7 +576,6 @@
             document.body.style.overflow = 'hidden';
 
             document.getElementById('matchesLoading').classList.remove('hidden');
-            document.getElementById('matchesLoading').textContent = "Calcul des scores de corrélation multi-sources en cours...";
             document.getElementById('matchesList').classList.add('hidden');
             document.getElementById('badgeMatchesCount').textContent = "...";
             document.getElementById('badgeFamilyCount').textContent = "...";
@@ -560,92 +594,64 @@
             try {
                 const res = await fetch(`/api/correlations?${params.toString()}`);
                 const data = await res.json();
-                renderCorrelations(data.matches || [], data.family || []);
+                renderCorrelations(data.matches || [], data.foyer || data.family || []);
             } catch (err) {
-                document.getElementById('matchesLoading').textContent = "Erreur lors de l'analyse : " + err.message;
+                document.getElementById('matchesLoading').textContent = "Erreur d'analyse";
             }
         }
 
         function renderCorrelations(matches, family) {
             document.getElementById('matchesLoading').classList.add('hidden');
             document.getElementById('matchesList').classList.remove('hidden');
-
             document.getElementById('badgeMatchesCount').textContent = matches.length;
             document.getElementById('badgeFamilyCount').textContent = family.length;
 
-            // Render Matches
             const mList = document.getElementById('matchesList');
-            mList.innerHTML = '';
-            if (matches.length === 0) {
-                mList.innerHTML = `<div class="text-center py-6 text-gray-500 text-xs">Aucune correspondance détectée dans les autres sources.</div>`;
-            } else {
-                matches.forEach(m => {
-                    const d = m.data;
-                    const card = document.createElement('div');
-                    card.className = "p-3 rounded-xl bg-[#0e1626] border border-gray-800 hover:border-indigo-400 hover:bg-[#131d31] transition cursor-pointer group";
-                    card.title = "Cliquer pour ouvrir et analyser ce profil";
-                    card.onclick = () => openModal(d);
+            mList.innerHTML = matches.length === 0 ? '<div class="text-center py-4 text-gray-500 text-xs">Aucune correspondance.</div>' : '';
+            matches.forEach(m => {
+                const d = m.data;
+                const card = document.createElement('div');
+                card.className = "p-2.5 rounded-lg bg-[#0e1626] border border-gray-800 hover:border-indigo-400 cursor-pointer";
+                card.onclick = () => openModal(d);
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span style="${getBadgeStyle(d.source)}" class="px-1.5 py-0.5 rounded text-[9px] font-mono">${d.source}</span>
+                            <span class="font-bold text-white text-xs">${d.Nom || ''} ${d.Prenom || ''}</span>
+                        </div>
+                        <div>${getScoreBadge(m.score)}</div>
+                    </div>
+                    <div class="text-[11px] text-gray-400 grid grid-cols-1 sm:grid-cols-2 gap-0.5">
+                        <div>📞 <span class="text-emerald-400 font-mono">${d['numero de tel'] || '-'}</span></div>
+                        <div>✉️ <span class="text-indigo-300">${d.mail || '-'}</span></div>
+                        <div class="sm:col-span-2">🏠 ${d.adresse || '-'} (${d.ville || ''})</div>
+                    </div>
+                `;
+                mList.appendChild(card);
+            });
 
-                    card.innerHTML = `
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center space-x-2">
-                                <span style="${getBadgeStyle(d.source)}" class="px-2 py-0.5 rounded text-[10px] font-mono">${d.source}</span>
-                                <span class="font-bold text-white text-xs group-hover:text-indigo-300 transition">${d.Nom || ''} ${d.Prenom || ''}</span>
-                                <span class="text-[10px] text-gray-500 font-normal group-hover:text-indigo-400 transition">↗ Analyser</span>
-                            </div>
-                            <div>${getScoreBadge(m.score)}</div>
-                        </div>
-                        <div class="text-[11px] text-gray-300 grid grid-cols-1 md:grid-cols-2 gap-1 mb-2">
-                            <div>📅 Naissance : <span class="text-gray-100 font-mono">${d['Date de naissance'] || '-'}</span></div>
-                            <div>📞 Tel : <span class="text-emerald-400 font-mono">${d['numero de tel'] || '-'}</span></div>
-                            <div>✉️ Mail : <span class="text-indigo-300">${d.mail || '-'}</span></div>
-                            <div>📍 Ville : <span class="text-gray-100">${d['code postal'] || ''} ${d.ville || ''}</span></div>
-                            <div class="col-span-2">🏠 Adresse : <span class="text-gray-400">${d.adresse || '-'}</span></div>
-                        </div>
-                        <div class="flex flex-wrap gap-1 border-t border-gray-800/80 pt-2">
-                            ${m.reasons.map(r => `<span class="bg-indigo-950/60 text-indigo-300 border border-indigo-800/40 text-[10px] px-2 py-0.5 rounded">${r}</span>`).join('')}
-                        </div>
-                    `;
-                    mList.appendChild(card);
-                });
-            }
-
-            // Render Family
             const fList = document.getElementById('familyList');
-            fList.innerHTML = '';
-            if (family.length === 0) {
-                fList.innerHTML = `<div class="text-center py-6 text-gray-500 text-xs">Aucun membre du foyer détecté pour cette adresse/nom.</div>`;
-            } else {
-                family.forEach(f => {
-                    const d = f.data;
-                    const card = document.createElement('div');
-                    card.className = "p-3 rounded-xl bg-[#0e1626] border border-gray-800 hover:border-emerald-400 hover:bg-[#131d31] transition cursor-pointer group";
-                    card.title = "Cliquer pour ouvrir et analyser ce membre du foyer";
-                    card.onclick = () => openModal(d);
-
-                    card.innerHTML = `
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center space-x-2">
-                                <span style="${getBadgeStyle(d.source)}" class="px-2 py-0.5 rounded text-[10px] font-mono">${d.source}</span>
-                                <span class="font-bold text-white text-xs group-hover:text-emerald-300 transition">${d.Nom || ''} ${d.Prenom || ''}</span>
-                                <span class="text-[10px] text-gray-500 font-normal group-hover:text-emerald-400 transition">↗ Analyser</span>
-                            </div>
-                            <div>${getScoreBadge(f.score)}</div>
+            fList.innerHTML = family.length === 0 ? '<div class="text-center py-4 text-gray-500 text-xs">Aucun membre du foyer trouvé.</div>' : '';
+            family.forEach(f => {
+                const d = f.data;
+                const card = document.createElement('div');
+                card.className = "p-2.5 rounded-lg bg-[#0e1626] border border-gray-800 hover:border-emerald-400 cursor-pointer";
+                card.onclick = () => openModal(d);
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span style="${getBadgeStyle(d.source)}" class="px-1.5 py-0.5 rounded text-[9px] font-mono">${d.source}</span>
+                            <span class="font-bold text-white text-xs">${d.Nom || ''} ${d.Prenom || ''}</span>
                         </div>
-                        <div class="text-[11px] text-gray-300 grid grid-cols-1 md:grid-cols-2 gap-1 mb-2">
-                            <div>📅 Naissance : <span class="text-gray-100 font-mono">${d['Date de naissance'] || '-'}</span></div>
-                            <div>📞 Tel : <span class="text-emerald-400 font-mono">${d['numero de tel'] || '-'}</span></div>
-                            <div>✉️ Mail : <span class="text-indigo-300">${d.mail || '-'}</span></div>
-                            <div>📍 Ville : <span class="text-gray-100">${d['code postal'] || ''} ${d.ville || ''}</span></div>
-                            <div class="col-span-2">🏠 Adresse : <span class="text-gray-400">${d.adresse || '-'}</span></div>
-                        </div>
-                        <div class="flex flex-wrap gap-1 border-t border-gray-800/80 pt-2">
-                            ${f.reasons.map(r => `<span class="bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 text-[10px] px-2 py-0.5 rounded">${r}</span>`).join('')}
-                        </div>
-                    `;
-                    fList.appendChild(card);
-                });
-            }
+                        <div>${getScoreBadge(f.score)}</div>
+                    </div>
+                    <div class="text-[11px] text-gray-400">
+                        <div>📞 <span class="text-emerald-400 font-mono">${d['numero de tel'] || '-'}</span></div>
+                        <div>🏠 ${d.adresse || '-'}</div>
+                    </div>
+                `;
+                fList.appendChild(card);
+            });
         }
 
         function closeModal() {
@@ -657,25 +663,17 @@
             const text = document.getElementById('modalJsonContent').textContent;
             navigator.clipboard.writeText(text).then(() => {
                 const btn = document.getElementById('btnCopyJson');
-                const prev = btn.textContent;
                 btn.textContent = "Copié !";
-                btn.classList.add("text-emerald-400");
-                setTimeout(() => {
-                    btn.textContent = prev;
-                    btn.classList.remove("text-emerald-400");
-                }, 1500);
+                setTimeout(() => btn.textContent = "Copier", 1500);
             });
         }
 
         document.getElementById('modalOverlay').addEventListener('click', (e) => {
             if (e.target.id === 'modalOverlay') closeModal();
         });
-
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeModal();
-            if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('hidden')) {
-                runSearch();
-            }
+            if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('hidden')) runSearch();
         });
     </script>
 </body>

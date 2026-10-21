@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BrixHub &bull; Master Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0d14',
+                        surface: '#121824',
+                        card: '#182032',
+                        accent: '#3b82f6'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0a0d14; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-dark text-slate-200 min-h-screen flex flex-col font-sans">
+
+    <!-- Header Responsive -->
+    <header class="border-b border-slate-800 bg-surface/80 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded bg-red-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-lg shadow-red-500/20">A</div>
+                <span class="font-bold text-sm sm:text-lg text-white">BrixHub <span class="text-red-400 text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/10">ADMIN</span></span>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-4 text-xs">
+                <button onclick="fetchKeys()" class="text-slate-400 hover:text-white p-1.5 bg-slate-800 rounded">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+                <a href="/" target="_blank" class="hidden sm:inline text-slate-400 hover:text-white transition">App</a>
+                <button onclick="logout()" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-[11px]">
+                    <i class="fa-solid fa-arrow-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Déconnexion</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8 flex-1 w-full space-y-6">
+        
+        <!-- Stats Grille 2x2 Mobile / 4 Cols Desktop -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+            <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Total Clés</div>
+                <div id="statTotal" class="text-xl sm:text-2xl font-extrabold text-white mt-0.5">-</div>
+            </div>
+            <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Clés Actives</div>
+                <div id="statActive" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-0.5">-</div>
+            </div>
+            <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Req Aujourd'hui</div>
+                <div id="statReqToday" class="text-xl sm:text-2xl font-extrabold text-cyan-400 mt-0.5">-</div>
+            </div>
+            <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Plans Pro/VIP</div>
+                <div id="statPro" class="text-xl sm:text-2xl font-extrabold text-blue-400 mt-0.5">-</div>
+            </div>
+        </div>
+
+        <!-- Action Bar Mobile-First -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="relative w-full sm:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-xs"></i>
+                <input type="text" id="searchInput" oninput="filterKeys()" placeholder="Rechercher une clé, email..."
+                       class="w-full pl-9 pr-4 py-2 bg-surface border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
+            </div>
+            <button onclick="openCreateModal()" class="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+                <i class="fa-solid fa-plus"></i> Créer une clé API
+            </button>
+        </div>
+
+        <!-- Table des clés avec Défilement Tactile Doux -->
+        <div class="bg-surface border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+            <div class="overflow-x-auto custom-scroll">
+                <table class="w-full text-left text-xs text-slate-300 min-w-[750px]">
+                    <thead class="bg-dark/70 text-slate-400 uppercase font-mono border-b border-slate-800 text-[10px]">
+                        <tr>
+                            <th class="py-3 px-4">Statut</th>
+                            <th class="py-3 px-4">Label & Propriétaire</th>
+                            <th class="py-3 px-4">Création</th>
+                            <th class="py-3 px-4">Aperçu</th>
+                            <th class="py-3 px-4">Plan</th>
+                            <th class="py-3 px-4">Utilisé / Quota</th>
+                            <th class="py-3 px-4 text-emerald-400">Restant</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keysTableBody" class="divide-y divide-slate-800/60 font-sans">
+                        <tr><td colspan="8" class="py-8 text-center text-slate-500">Chargement...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Détails Clé Tactile & Responsive -->
+    <div id="detailsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-5xl p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-2xl flex flex-col max-h-[92vh]">
+            
+            <div class="flex items-start justify-between border-b border-slate-800 pb-3">
+                <div class="pr-2">
+                    <div class="flex items-center gap-2">
+                        <h3 id="detModalTitle" class="font-bold text-white text-sm sm:text-lg truncate max-w-[200px] sm:max-w-md">Détails de la clé</h3>
+                        <span id="detModalBadge"></span>
+                    </div>
+                    <p id="detModalSubtitle" class="text-[10px] sm:text-xs text-slate-400 font-mono truncate max-w-[250px] sm:max-w-lg mt-0.5"></p>
+                </div>
+                <button onclick="closeDetailsModal()" class="text-slate-500 hover:text-white text-lg p-1">✕</button>
+            </div>
+
+            <!-- Grille Métriques 2x2 Mobile -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <div class="bg-dark/80 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
+                    <div class="text-slate-400 text-[10px]">Créée le</div>
+                    <div id="detCreatedAt" class="font-mono text-slate-200 mt-0.5 text-xs font-semibold">-</div>
+                </div>
+                <div class="bg-dark/80 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
+                    <div class="text-slate-400 text-[10px]">Utilisé ajd</div>
+                    <div id="detUsedToday" class="font-mono text-cyan-400 mt-0.5 font-bold text-xs sm:text-sm">-</div>
+                </div>
+                <div class="bg-dark/80 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
+                    <div class="text-slate-400 text-[10px]">Restant</div>
+                    <div id="detRemainingToday" class="font-mono text-emerald-400 mt-0.5 font-bold text-xs sm:text-sm">-</div>
+                </div>
+                <div class="bg-dark/80 border border-slate-800 p-2.5 sm:p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="text-slate-400 text-[10px]">Plan</div>
+                        <div id="detPlanName" class="font-mono text-blue-400 mt-0.5 font-bold text-xs uppercase">-</div>
+                    </div>
+                    <button id="detResetQuotaBtn" class="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded text-[10px] font-medium transition">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Logs Mobile Scrollable -->
+            <div class="space-y-2 flex-1 flex flex-col min-h-0">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="font-semibold text-slate-300">Historique des requêtes</span>
+                    <span id="detLogsCount" class="text-[10px] text-slate-500 font-mono"></span>
+                </div>
+                <div class="overflow-y-auto overflow-x-auto custom-scroll flex-1 border border-slate-800 rounded-xl bg-dark/40">
+                    <table class="w-full text-left text-xs text-slate-300 min-w-[550px]">
+                        <thead class="bg-dark text-slate-400 font-mono sticky top-0 border-b border-slate-800 text-[10px]">
+                            <tr>
+                                <th class="py-2 px-3">Date</th>
+                                <th class="py-2 px-3">IP</th>
+                                <th class="py-2 px-3">URL Complète</th>
+                                <th class="py-2 px-3">Code</th>
+                                <th class="py-2 px-3 text-right">Latence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detLogsTableBody" class="divide-y divide-slate-800/60 font-mono text-[10px]"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-slate-800 pt-3">
+                <div id="detActionButtons"></div>
+                <button onclick="closeDetailsModal()" class="px-3.5 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-medium">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Création Clé -->
+    <div id="createModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+        <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h3 class="font-bold text-white text-sm">Générer une Clé API</h3>
+                <button onclick="closeCreateModal()" class="text-slate-500 hover:text-white">✕</button>
+            </div>
+            <form id="createKeyForm" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Nom / Label</label>
+                    <input type="text" id="newLabel" required placeholder="Client Telegram" class="w-full px-3 py-2 bg-dark border border-slate-700 rounded-lg text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Email</label>
+                    <input type="email" id="newEmail" required placeholder="contact@domaine.com" class="w-full px-3 py-2 bg-dark border border-slate-700 rounded-lg text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Plan</label>
+                    <select id="newPlan" class="w-full px-3 py-2 bg-dark border border-slate-700 rounded-lg text-white font-mono">
+                        <option value="free">free (50 req/j)</option>
+                        <option value="starter">starter (1 000 req/j)</option>
+                        <option value="pro" selected>pro (50 000 req/j)</option>
+                        <option value="enterprise">enterprise (Illimité)</option>
+                    </select>
+                </div>
+                <button type="submit" id="createBtn" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition mt-2">
+                    Générer la Clé
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Copie Clé Brute -->
+    <div id="showKeyModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+        <div class="bg-surface border border-emerald-500/40 rounded-2xl w-full max-w-md p-5 space-y-3">
+            <h3 class="font-bold text-white text-sm text-center">Clé API Générée</h3>
+            <div class="bg-dark p-3 rounded-lg border border-slate-700 font-mono text-[11px] text-emerald-300 break-all select-all" id="generatedRawKey"></div>
+            <button onclick="copyGeneratedKey()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs">
+                <span id="copyBtnText">Copier la clé</span>
+            </button>
+            <button onclick="closeShowKeyModal()" class="w-full py-1.5 bg-slate-800 text-slate-400 rounded-lg text-xs">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        let allKeys = [];
+        let currentOpenKeyId = null;
+
+        function formatDate(val) {
+            if (!val) return '-';
+            try {
+                const d = new Date(val);
+                if (isNaN(d.getTime())) return String(val).split('.')[0];
+                return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            } catch (e) { return String(val); }
+        }
+
+        async function fetchKeys() {
+            try {
+                const res = await fetch('/admin/api/keys');
+                if (res.status === 401) { window.location.href = '/admin/login'; return; }
+                allKeys = await res.json();
+                renderTable(allKeys);
+                updateStats(allKeys);
+                if (currentOpenKeyId) {
+                    const refreshed = allKeys.find(k => k.key_id === currentOpenKeyId);
+                    if (refreshed) openDetailsModal(refreshed.key_id, false);
+                }
+            } catch (e) {}
+        }
+
+        function updateStats(keys) {
+            document.getElementById('statTotal').innerText = keys.length;
+            document.getElementById('statActive').innerText = keys.filter(k => k.is_active === 1).length;
+            const totalReq = keys.reduce((acc, k) => acc + (k.used_today || 0), 0);
+            document.getElementById('statReqToday').innerText = totalReq.toLocaleString();
+            document.getElementById('statPro').innerText = keys.filter(k => ['pro', 'enterprise'].includes(k.plan)).length;
+        }
+
+        function renderTable(keys) {
+            const tbody = document.getElementById('keysTableBody');
+            if (!keys.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-slate-500">Aucune clé.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = keys.map(k => {
+                const used = k.used_today || 0;
+                const max = k.quota_per_day || 0;
+                const pct = max > 0 ? Math.min(100, Math.round((used / max) * 100)) : 0;
+                const remaining = k.remaining_today !== undefined ? k.remaining_today : (max - used);
+
+                let badgeColor = 'bg-blue-500';
+                if (pct >= 85) badgeColor = 'bg-amber-500';
+                if (pct >= 100) badgeColor = 'bg-red-500';
+
+                return `
+                <tr class="hover:bg-card/60 cursor-pointer transition" onclick="openDetailsModal('${k.key_id}')">
+                    <td class="py-2.5 px-3">
+                        ${k.is_active === 1 
+                            ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[9px] border border-emerald-500/20">ACTIF</span>'
+                            : '<span class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-mono text-[9px] border border-red-500/20">OFF</span>'}
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <div class="font-semibold text-white truncate max-w-[140px]">${escapeHtml(k.label || '-')}</div>
+                        <div class="text-[10px] text-slate-500 font-mono truncate max-w-[140px]">${escapeHtml(k.owner_email || '-')}</div>
+                    </td>
+                    <td class="py-2.5 px-3 text-slate-400 font-mono text-[10px]">${formatDate(k.created_at)}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-300 text-[10px]">${k.preview || '-'}</td>
+                    <td class="py-2.5 px-3" onclick="event.stopPropagation()">
+                        <select onchange="changePlan('${k.key_id}', this.value)" class="bg-dark border border-slate-700 rounded px-1.5 py-0.5 text-[11px] font-mono text-blue-400">
+                            <option value="free" ${k.plan === 'free' ? 'selected' : ''}>free</option>
+                            <option value="starter" ${k.plan === 'starter' ? 'selected' : ''}>starter</option>
+                            <option value="pro" ${k.plan === 'pro' ? 'selected' : ''}>pro</option>
+                            <option value="enterprise" ${k.plan === 'enterprise' ? 'selected' : ''}>enterprise</option>
+                        </select>
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <div class="w-24 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="${badgeColor} h-full" style="width: ${max === 0 ? 5 : pct}%"></div>
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-mono">${used}/${max === 0 ? '∞' : max}</span>
+                    </td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-[11px] ${remaining <= 0 && max > 0 ? 'text-red-400' : 'text-emerald-400'}">
+                        ${max === 0 ? 'Illimité' : remaining.toLocaleString()}
+                    </td>
+                    <td class="py-2.5 px-3 text-right space-x-1" onclick="event.stopPropagation()">
+                        <button onclick="resetQuota('${k.key_id}')" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px] border border-amber-500/20">Reset</button>
+                        ${k.is_active === 1
+                            ? `<button onclick="revokeKey('${k.key_id}')" class="px-2 py-0.5 bg-red-500/10 text-red-400 rounded text-[10px] border border-red-500/20">Ban</button>`
+                            : `<button onclick="reactivateKey('${k.key_id}')" class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[10px] border border-emerald-500/20">On</button>`}
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function filterKeys() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allKeys.filter(k => 
+                (k.label || '').toLowerCase().includes(q) ||
+                (k.owner_email || '').toLowerCase().includes(q) ||
+                (k.preview || '').toLowerCase().includes(q)
+            );
+            renderTable(filtered);
+        }
+
+        async function openDetailsModal(keyId, fetchLogs = true) {
+            currentOpenKeyId = keyId;
+            const key = allKeys.find(k => k.key_id === keyId);
+            if (!key) return;
+
+            document.getElementById('detModalTitle').innerText = key.label || 'Sans nom';
+            document.getElementById('detModalSubtitle').innerText = `${key.preview} &bull; ${key.owner_email || ''}`;
+            document.getElementById('detModalBadge').innerHTML = key.is_active === 1
+                ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[9px] border border-emerald-500/20">ACTIF</span>'
+                : '<span class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-mono text-[9px] border border-red-500/20">RÉVOQUÉ</span>';
+
+            document.getElementById('detCreatedAt').innerText = formatDate(key.created_at);
+            document.getElementById('detPlanName').innerText = key.plan || 'FREE';
+            
+            const used = key.used_today || 0;
+            const max = key.quota_per_day || 0;
+            const remaining = key.remaining_today !== undefined ? key.remaining_today : (max - used);
+
+            document.getElementById('detUsedToday').innerText = `${used.toLocaleString()}`;
+            document.getElementById('detRemainingToday').innerText = max === 0 ? 'Illimité' : `${remaining.toLocaleString()}`;
+
+            document.getElementById('detResetQuotaBtn').onclick = () => resetQuota(key.key_id);
+
+            const actionsDiv = document.getElementById('detActionButtons');
+            actionsDiv.innerHTML = key.is_active === 1
+                ? `<button onclick="revokeKey('${key.key_id}')" class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-xs">Révoquer</button>`
+                : `<button onclick="reactivateKey('${key.key_id}')" class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-xs">Réactiver</button>`;
+
+            document.getElementById('detailsModal').classList.remove('hidden');
+
+            if (fetchLogs) {
+                const tbody = document.getElementById('detLogsTableBody');
+                tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">Chargement...</td></tr>';
+                try {
+                    const res = await fetch(`/admin/api/keys/${keyId}/logs`);
+                    const logs = await res.json();
+                    document.getElementById('detLogsCount').innerText = `${logs.length} requêtes`;
+                    if (!logs.length) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">Aucune activité.</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = logs.map(l => `
+                        <tr class="hover:bg-slate-800/40">
+                            <td class="py-2 px-2 text-slate-400 whitespace-nowrap">${formatDate(l.ts)}</td>
+                            <td class="py-2 px-2 font-semibold text-emerald-400 whitespace-nowrap">${l.client_ip || '-'}</td>
+                            <td class="py-2 px-2 text-slate-200 max-w-xs break-all select-all">${escapeHtml(l.endpoint)}</td>
+                            <td class="py-2 px-2 whitespace-nowrap"><span class="px-1 py-0.5 rounded text-[9px] ${l.status >= 400 ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}">${l.status}</span></td>
+                            <td class="py-2 px-2 text-right text-slate-400 whitespace-nowrap">${l.latency_ms}ms</td>
+                        </tr>
+                    `).join('');
+                } catch (err) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-red-400">Erreur logs.</td></tr>';
+                }
+            }
+        }
+
+        function closeDetailsModal() { currentOpenKeyId = null; document.getElementById('detailsModal').classList.add('hidden'); }
+        async function resetQuota(keyId) {
+            if (!confirm('Remettre à zéro le compteur de cette clé ?')) return;
+            const res = await fetch(`/admin/api/keys/${keyId}/reset-quota`, { method: 'POST' });
+            if (res.ok) fetchKeys();
+        }
+        async function changePlan(keyId, newPlan) {
+            const res = await fetch(`/admin/api/keys/${keyId}/plan`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: newPlan })
+            });
+            if (res.ok) fetchKeys();
+        }
+        async function revokeKey(keyId) {
+            if (!confirm('Révoquer la clé ?')) return;
+            const res = await fetch(`/admin/api/keys/${keyId}`, { method: 'DELETE' });
+            if (res.ok) fetchKeys();
+        }
+        async function reactivateKey(keyId) {
+            const res = await fetch(`/admin/api/keys/${keyId}/reactivate`, { method: 'POST' });
+            if (res.ok) fetchKeys();
+        }
+
+        function openCreateModal() { document.getElementById('createModal').classList.remove('hidden'); }
+        function closeCreateModal() { document.getElementById('createModal').classList.add('hidden'); }
+        function closeShowKeyModal() { document.getElementById('showKeyModal').classList.add('hidden'); }
+
+        document.getElementById('createKeyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const label = document.getElementById('newLabel').value.trim();
+            const owner_email = document.getElementById('newEmail').value.trim();
+            const plan = document.getElementById('newPlan').value;
+            const btn = document.getElementById('createBtn');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/admin/api/keys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label, owner_email, plan })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    closeCreateModal();
+                    document.getElementById('generatedRawKey').innerText = data.key;
+                    document.getElementById('showKeyModal').classList.remove('hidden');
+                    fetchKeys();
+                } else alert(data.detail || 'Erreur');
+            } finally { btn.disabled = false; }
+        });
+
+        function copyGeneratedKey() {
+            navigator.clipboard.writeText(document.getElementById('generatedRawKey').innerText);
+            document.getElementById('copyBtnText').innerText = 'Copié !';
+            setTimeout(() => document.getElementById('copyBtnText').innerText = 'Copier la clé', 2000);
+        }
+
+        async function logout() {
+            await fetch('/admin/api/logout', { method: 'POST' });
+            window.location.href = '/admin/login';
+        }
+
+        function escapeHtml(str) { return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+        fetchKeys();
+    </script>
+</body>
+</html>

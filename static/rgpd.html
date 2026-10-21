@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGPD & Droit à l'Oubli - BrixHub OSINT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0d14',
+                        surface: '#121824',
+                        card: '#182032',
+                        accent: '#3b82f6'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark text-slate-200 min-h-screen flex flex-col font-sans">
+
+    <header class="border-b border-slate-800 bg-surface/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-lg">B</div>
+                <span class="font-bold text-lg text-white">BrixHub <span class="text-emerald-500 text-xs font-mono ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">RGPD</span></span>
+            </a>
+            <a href="/" class="text-slate-400 hover:text-white transition text-sm"><i class="fa-solid fa-arrow-left mr-1.5"></i>Retour à l'accueil</a>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 py-12 flex-1 w-full space-y-8 text-sm leading-relaxed text-slate-300">
+        
+        <div class="border-b border-slate-800 pb-4">
+            <h1 class="text-3xl font-extrabold text-white">Protection des Données & Droit à l'Oubli</h1>
+            <p class="text-slate-500 text-xs mt-1">Conformité avec le Règlement Général sur la Protection des Données (RGPD - UE 2016/679)</p>
+        </div>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-file-contract text-emerald-400"></i> Engagement de Confidentialité</h2>
+            <p>BrixHub traite les données publiques avec un strict engagement de proportionnalité et de transparence. Conformément aux dispositions des <strong>Articles 17 (Droit à l'effacement)</strong> et <strong>21 (Droit d'opposition)</strong> du RGPD, toute personne physique dispose du droit inaliénable de demander le déréférencement total de ses informations personnelles de nos index de recherche.</p>
+        </section>
+
+        <section class="space-y-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-trash-can text-red-400"></i> Procédure de Suppression / Déréférencement</h2>
+            <p>Pour faire valoir votre droit au déréférencement, transmettez votre demande en suivant la procédure ci-dessous. Le traitement s'effectue sous <strong>48 heures ouvrées</strong> :</p>
+
+            <div class="bg-surface rounded-xl border border-slate-800 p-6 space-y-4">
+                <h3 class="font-bold text-white text-sm">Informations à fournir :</h3>
+                <ul class="list-disc pl-5 space-y-1.5 text-xs text-slate-400">
+                    <li>Nom complet et prénom tels qu'ils apparaissent dans les résultats.</li>
+                    <li>Éléments d'identification associés (numéro de téléphone, adresse ou email concerné).</li>
+                    <li>Un justificatif d'identité valide (pour éviter les suppressions malveillantes au nom de tiers). Les pièces d'identité sont supprimées immédiatement après vérification.</li>
+                </ul>
+
+                <div class="pt-2">
+                    <a href="https://t.me/leakfrench" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition">
+                        <i class="fa-brands fa-telegram"></i> Contacter l'Officier de Confidentialité (DPO)
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-server text-blue-500"></i> Journalisation et Traçabilité</h2>
+            <p>Dans le cadre de la sécurité du système et de la prévention des abus, les adresses IP et les critères recherchés sont conservés pour une durée maximale de 30 jours dans des journaux d'accès chiffrés, avant d'être purgés définitivement.</p>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-slate-800 bg-surface/50 py-6 text-xs text-slate-500">
+        <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>&copy; 2026 BrixHub OSINT Engine.</div>
+            <div class="flex items-center gap-6">
+                <a href="/api-docs" class="hover:text-slate-400 transition">API & Tarifs</a>
+                <a href="/cgu" class="hover:text-slate-400 transition">CGU</a>
+                <a href="/rgpd" class="text-slate-400 hover:text-white transition">RGPD & Déréférencement</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

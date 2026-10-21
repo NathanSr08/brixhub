@@ -58,3 +58,32 @@ def usage_today(key_id: str) -> int:
         f"SELECT count() FROM {USAGE_TABLE} WHERE key_id = %(k)s AND toDate(ts) = today()",
         parameters={"k": key_id})
     return res.result_rows[0][0] if res.result_rows else 0
+
+
+def get_key_logs(key_id: str, limit: int = 100) -> list[dict]:
+    global _buffer
+    if _buffer:
+        try:
+            _flush_sync(_buffer[:])
+            _buffer.clear()
+        except Exception:
+            pass
+
+    res = get_ch().query(f"""
+        SELECT ts, endpoint, status, latency_ms, client_ip
+        FROM {USAGE_TABLE}
+        WHERE key_id = %(k)s
+        ORDER BY ts DESC
+        LIMIT %(lim)s
+    """, parameters={"k": key_id, "lim": limit})
+    
+    return [
+        {
+            "ts": str(r[0]),
+            "endpoint": r[1],
+            "status": r[2],
+            "latency_ms": r[3],
+            "client_ip": r[4]
+        }
+        for r in res.result_rows
+    ]

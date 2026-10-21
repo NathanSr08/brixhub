@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conditions Générales d'Utilisation - BrixHub OSINT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0d14',
+                        surface: '#121824',
+                        card: '#182032',
+                        accent: '#3b82f6'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark text-slate-200 min-h-screen flex flex-col font-sans">
+
+    <header class="border-b border-slate-800 bg-surface/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-lg">B</div>
+                <span class="font-bold text-lg text-white">BrixHub <span class="text-slate-500 text-xs font-mono ml-1">CGU</span></span>
+            </a>
+            <a href="/" class="text-slate-400 hover:text-white transition text-sm"><i class="fa-solid fa-arrow-left mr-1.5"></i>Retour à l'accueil</a>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 py-12 flex-1 w-full space-y-8 text-sm leading-relaxed text-slate-300">
+        
+        <div class="border-b border-slate-800 pb-4">
+            <h1 class="text-3xl font-extrabold text-white">Conditions Générales d'Utilisation</h1>
+            <p class="text-slate-500 text-xs mt-1">Dernière mise à jour : Février 2026</p>
+        </div>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-scale-balanced text-blue-500"></i> 1. Objet et Champ d'Application</h2>
+            <p>La plateforme <strong>BrixHub</strong> est un outil d'indexation et d'investigation en sources ouvertes (OSINT). L'accès et l'utilisation de la plateforme web ainsi que des API associées sont conditionnés au strict respect des présentes Conditions Générales d'Utilisation.</p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-shield-halved text-blue-500"></i> 2. Usages Autorisés et Responsabilité</h2>
+            <p>L'utilisateur s'engage expressément à utiliser la plateforme dans un cadre légal, éthique et professionnel, incluant sans s'y limiter :</p>
+            <ul class="list-disc pl-6 space-y-1 text-slate-400">
+                <li>La recherche en cybersécurité et l'analyse de menaces (Threat Intelligence).</li>
+                <li>Les enquêtes de conformité (KYC / AML / Anti-Fraude).</li>
+                <li>Les investigations journalistiques ou académiques dûment justifiées.</li>
+            </ul>
+            <div class="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-xs mt-2">
+                <strong>Interdiction formelle :</strong> Tout usage visant le harcèlement, l'usurpation d'identité (doxxing), l'escroquerie, la surveillance illégale ou l'atteinte malveillante à la vie privée entraînera la révocation immédiate de la clé d'accès sans préavis et d'éventuelles poursuites.
+            </div>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-key text-blue-500"></i> 3. Clés d'Accès et Quotas</h2>
+            <p>Les clés API délivrées sont strictement personnelles, confidentielles et intransmissibles. Toute détection de partage non autorisé ou de rétro-ingénierie du service entraînera le blocage du compte.</p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-database text-blue-500"></i> 4. Limitation de Responsabilité</h2>
+            <p>BrixHub indexe des métadonnées issues de bases publiques ou de dépôts ouverts. La plateforme ne garantit ni l'exhaustivité, ni l'exactitude absolue des données restituées. L'utilisateur demeure seul responsable des conclusions et recoupements qu'il opère à partir des résultats fournis.</p>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-slate-800 bg-surface/50 py-6 text-xs text-slate-500">
+        <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>&copy; 2026 BrixHub OSINT Engine.</div>
+            <div class="flex items-center gap-6">
+                <a href="/api-docs" class="hover:text-slate-400 transition">API & Tarifs</a>
+                <a href="/cgu" class="text-slate-400 hover:text-white transition">CGU</a>
+                <a href="/rgpd" class="hover:text-slate-400 transition">RGPD & Déréférencement</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
