@@ -261,12 +261,12 @@ SMTP_PORT=587
 SMTP_USER=nathansroussi@gmail.com
 SMTP_PASSWORD=votre_mot_de_passe_application_16_caracteres
 SMTP_FROM_NAME="BrixHub Security"
-SMTP_FROM_EMAIL=nathansroussi@gmail.com
+SMTP_FROM_EMAIL=xxxx@gmail.com
 
 # Configuration des domaines
 DOMAIN_WEB=brixhub.uned.live
 DOMAIN_N8N=n8n.uned.live
-LETSENCRYPT_EMAIL=nathansroussi@gmail.com
+LETSENCRYPT_EMAIL=xxxxxx@gmail.com
 EOF
 
 ```
