@@ -258,7 +258,7 @@ JWT_SECRET=super_secret_jwt_token_entropy_brixhub_2026
 # Passerelle SMTP Google (Envoi OTP Sécurisé)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=nathansroussi@gmail.com
+SMTP_USER=xxxxx@gmail.com
 SMTP_PASSWORD=votre_mot_de_passe_application_16_caracteres
 SMTP_FROM_NAME="BrixHub Security"
 SMTP_FROM_EMAIL=xxxx@gmail.com
