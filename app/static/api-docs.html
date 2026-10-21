@@ -22,6 +22,12 @@
             }
         }
     </script>
+    <style>
+        .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0a0d14; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #334155; }
+    </style>
 </head>
 <body class="bg-dark text-slate-200 min-h-screen flex flex-col font-sans">
 
@@ -34,33 +40,35 @@
             </a>
             <nav class="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm">
                 <a href="/" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-arrow-left mr-1"></i>Recherche</a>
+                <a href="#endpoints" class="text-slate-400 hover:text-white transition hidden sm:inline">Endpoints</a>
+                <a href="#errors" class="text-slate-400 hover:text-white transition hidden sm:inline">Erreurs</a>
                 <a href="https://t.me/leakfrench" target="_blank" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs">Clé API</a>
             </nav>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-1 w-full space-y-10 sm:space-y-16">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-1 w-full space-y-12 sm:space-y-16">
 
         <!-- Hero -->
         <div class="text-center max-w-3xl mx-auto space-y-3">
             <h1 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">API Développeur & OSINT</h1>
-            <p class="text-slate-400 text-xs sm:text-base">Moteur de corrélation et données unifiées intégrables directement dans vos outils.</p>
+            <p class="text-slate-400 text-xs sm:text-base">Moteur d'indexation haute performance, de corrélation multi-sources et d'interrogation unifiée.</p>
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-[11px] font-mono text-slate-300">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Base: <span class="text-blue-400 font-bold">https://brixhub.uned.live/v1</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Base URL: <span class="text-blue-400 font-bold">https://brixhub.uned.live/v1</span>
             </div>
         </div>
 
-        <!-- Plans & Tarifs (1 Col Mobile / 3 Cols Desktop) -->
+        <!-- Plans & Tarifs -->
         <section id="plans" class="space-y-4 sm:space-y-6">
             <div class="border-b border-slate-800 pb-3">
                 <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
                     <i class="fa-solid fa-layer-group text-blue-500 text-base"></i> Plans & Licences API
                 </h2>
-                <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Accès direct et sans engagement.</p>
+                <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Accès direct et sans engagement avec quotas journaliers réinitialisés à 00:00 UTC.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                
+
                 <!-- Plan Standard -->
                 <div class="bg-surface rounded-xl border border-slate-800 p-5 sm:p-6 flex flex-col justify-between hover:border-slate-700 transition">
                     <div class="space-y-3">
@@ -71,8 +79,9 @@
                         </div>
                         <ul class="space-y-2 text-xs text-slate-300 pt-2">
                             <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> 1 000 requêtes / jour</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Accès `/v1/search`</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Débit 5 req/sec</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Accès <code class="text-blue-400">/v1/search</code></li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Débit standard 5 req/sec</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Support standard Telegram</li>
                         </ul>
                     </div>
                     <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20commander%20une%20clé%20API%20Standard%20(20€)" target="_blank"
@@ -92,8 +101,9 @@
                         </div>
                         <ul class="space-y-2 text-xs text-slate-300 pt-2">
                             <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> 50 000 requêtes / jour</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Accès `/v1/correlations`</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Accès complet <code class="text-blue-400">/v1/search</code> + <code class="text-purple-400">/v1/correlations</code></li>
                             <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Débit ultra-rapide 25 req/sec</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Support prioritaire 7j/7</li>
                         </ul>
                     </div>
                     <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20commander%20une%20clé%20API%20Pro%20(35€)" target="_blank"
@@ -112,7 +122,9 @@
                         </div>
                         <ul class="space-y-2 text-xs text-slate-300 pt-2">
                             <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Requêtes illimitées</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Pas de rate-limit</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Pas de rate-limit (sans restriction de débit)</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Intégration sur IP dédiée / Webhooks</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Support dédié SLA 99.9%</li>
                         </ul>
                     </div>
                     <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20un%20devis%20API%20Enterprise" target="_blank"
@@ -124,55 +136,403 @@
             </div>
         </section>
 
-        <!-- Documentation Endpoints -->
-        <section id="endpoints" class="space-y-6">
+        <!-- Authentification & Headers -->
+        <section id="auth" class="space-y-4">
             <div class="border-b border-slate-800 pb-3">
                 <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-terminal text-blue-500 text-base"></i> Spécifications
+                    <i class="fa-solid fa-key text-blue-500 text-base"></i> Authentification & En-têtes HTTP
                 </h2>
-                <p class="text-slate-400 text-xs">Authentification : <code class="text-blue-400">Authorization: Bearer CLE</code></p>
+                <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Toutes les requêtes vers l'API v1 nécessitent un Bearer Token valide délivré lors de votre souscription.</p>
             </div>
 
-            <!-- Endpoint 1 -->
-            <div class="bg-surface rounded-xl border border-slate-800 p-4 sm:p-6 space-y-3">
-                <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono text-xs font-bold border border-blue-500/20">GET</span>
-                    <span class="font-mono text-xs sm:text-sm text-white font-semibold">/v1/search</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-surface rounded-xl border border-slate-800 p-4 sm:p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-right-to-bracket text-blue-400"></i> En-têtes de Requête
+                    </h3>
+                    <ul class="text-xs text-slate-300 space-y-2 font-mono">
+                        <li class="bg-dark/80 p-2.5 rounded border border-slate-800/80">
+                            <span class="text-blue-400 font-semibold">Authorization:</span> Bearer &lt;VOTRE_CLE_API&gt;
+                            <div class="text-[11px] text-slate-400 font-sans mt-0.5">Obligatoire. Clé active commençant généralement par <code class="text-slate-300">brx_live_...</code>.</div>
+                        </li>
+                        <li class="bg-dark/80 p-2.5 rounded border border-slate-800/80">
+                            <span class="text-blue-400 font-semibold">Accept:</span> application/json
+                            <div class="text-[11px] text-slate-400 font-sans mt-0.5">Toutes les réponses sont structurées en JSON encodé en UTF-8.</div>
+                        </li>
+                    </ul>
                 </div>
-                <div class="overflow-x-auto custom-scroll">
-                    <table class="w-full text-left text-xs text-slate-300 min-w-[450px]">
-                        <thead>
-                            <tr class="border-b border-slate-800 text-slate-400 font-mono text-[10px]">
-                                <th class="py-1.5">Paramètre</th>
-                                <th>Type</th>
-                                <th>Description</th>
+
+                <div class="bg-surface rounded-xl border border-slate-800 p-4 sm:p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-gauge-high text-emerald-400"></i> En-têtes de Réponse (Rate Limiting)
+                    </h3>
+                    <ul class="text-xs text-slate-300 space-y-2 font-mono">
+                        <li class="bg-dark/80 p-2 rounded border border-slate-800/80 flex justify-between items-center">
+                            <span class="text-emerald-400 font-semibold">X-RateLimit-Limit</span>
+                            <span class="text-slate-400 text-[11px]">Quota total alloué / 24h</span>
+                        </li>
+                        <li class="bg-dark/80 p-2 rounded border border-slate-800/80 flex justify-between items-center">
+                            <span class="text-emerald-400 font-semibold">X-RateLimit-Remaining</span>
+                            <span class="text-slate-400 text-[11px]">Requêtes restantes aujourd'hui</span>
+                        </li>
+                        <li class="bg-dark/80 p-2 rounded border border-slate-800/80 flex justify-between items-center">
+                            <span class="text-emerald-400 font-semibold">X-RateLimit-Reset</span>
+                            <span class="text-slate-400 text-[11px]">Timestamp UNIX du reset (00:00 UTC)</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Documentation Endpoints -->
+        <section id="endpoints" class="space-y-8">
+            <div class="border-b border-slate-800 pb-3">
+                <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-terminal text-blue-500 text-base"></i> Spécifications des Endpoints
+                </h2>
+                <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Les requêtes de recherche s'effectuent en méthode HTTP GET via Query Parameters.</p>
+            </div>
+
+            <!-- ================= ENDPOINT 1 ================= -->
+            <div class="bg-surface rounded-xl border border-slate-800 p-5 sm:p-6 space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                    <div class="flex items-center gap-2.5">
+                        <span class="px-2.5 py-1 rounded bg-blue-500/10 text-blue-400 font-mono text-xs font-bold border border-blue-500/20">GET</span>
+                        <span class="font-mono text-sm sm:text-base text-white font-bold">/v1/search</span>
+                    </div>
+                    <span class="text-xs text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded border border-slate-700/60">Plans : Standard, Pro, Enterprise</span>
+                </div>
+
+                <p class="text-xs sm:text-sm text-slate-300">
+                    Interroge l'index global par critères combinables ou via recherche textuelle floue. Au moins un critère de filtrage ou une chaîne de recherche globale (<code class="text-blue-400">q</code>) doit être fourni.
+                </p>
+
+                <!-- Paramètres -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Paramètres d'URL (Query Parameters)</h4>
+                    <div class="overflow-x-auto custom-scroll border border-slate-800 rounded-lg">
+                        <table class="w-full text-left text-xs text-slate-300 min-w-[600px]">
+                            <thead class="bg-dark/60 text-slate-400 font-mono text-[11px] border-b border-slate-800">
+                                <tr>
+                                    <th class="py-2.5 px-3">Paramètre</th>
+                                    <th class="px-3">Type</th>
+                                    <th class="px-3">Exemple</th>
+                                    <th class="px-3">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 font-mono text-[11px]">
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">q</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">dupont lyon</td>
+                                    <td class="px-3 text-slate-300 font-sans">Recherche globale full-text multi-colonnes.</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">nom</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">DUPONT</td>
+                                    <td class="px-3 text-slate-300 font-sans">Nom de famille (insensible à la casse et accents).</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">prenom</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">Jean</td>
+                                    <td class="px-3 text-slate-300 font-sans">Prénom de la personne ciblée.</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">date_naissance</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">1985-04-12</td>
+                                    <td class="px-3 text-slate-300 font-sans">Date complète (format ISO <code class="text-slate-400">YYYY-MM-DD</code> ou partiel).</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">jour / mois / annee</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">jour=12&annee=1985</td>
+                                    <td class="px-3 text-slate-300 font-sans">Filtrage par éléments de date dissociés.</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">tel</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">0612345678</td>
+                                    <td class="px-3 text-slate-300 font-sans">Téléphone (format national ou international <code class="text-slate-400">+33...</code>).</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">mail</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">j.dupont@gmail.com</td>
+                                    <td class="px-3 text-slate-300 font-sans">Adresse email (recherche exacte ou par domaine).</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">code_postal</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">75008</td>
+                                    <td class="px-3 text-slate-300 font-sans">Code postal ou préfixe départemental (ex: <code class="text-slate-400">75</code>).</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">ville</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">Paris</td>
+                                    <td class="px-3 text-slate-300 font-sans">Commune de résidence.</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">source</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-500">ALL</td>
+                                    <td class="px-3 text-slate-300 font-sans">Nom de la base spécifique (ou laisser vide pour toutes).</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-blue-400 font-bold">limit</td>
+                                    <td class="px-3 text-slate-400">integer</td>
+                                    <td class="px-3 text-slate-500">50</td>
+                                    <td class="px-3 text-slate-300 font-sans">Nombre max d'enregistrements retournés (Défaut: 50, Max: 250).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Exemple Réponse JSON -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Exemple de Réponse Réussie (200 OK)</h4>
+                    <pre class="bg-dark p-3.5 rounded-lg text-[11px] font-mono text-emerald-300 overflow-x-auto border border-slate-800 custom-scroll"><code>[
+  {
+    "id": "ck_948201a",
+    "nom": "DUPONT",
+    "prenom": "Jean",
+    "date_naissance": "1985-04-12",
+    "adresse": "14 RUE DE LA PAIX",
+    "code_postal": "75002",
+    "ville": "PARIS",
+    "tel": "0612345678",
+    "mail": "jean.dupont85@gmail.com",
+    "source": "FR_ECOMMERCE_2023",
+    "score": 0.98
+  }
+]</code></pre>
+                </div>
+            </div>
+
+            <!-- ================= ENDPOINT 2 ================= -->
+            <div class="bg-surface rounded-xl border border-slate-800 p-5 sm:p-6 space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                    <div class="flex items-center gap-2.5">
+                        <span class="px-2.5 py-1 rounded bg-purple-500/10 text-purple-400 font-mono text-xs font-bold border border-purple-500/20">GET</span>
+                        <span class="font-mono text-sm sm:text-base text-white font-bold">/v1/correlations</span>
+                    </div>
+                    <span class="text-xs text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2.5 py-1 rounded">Plans : Pro & Enterprise</span>
+                </div>
+
+                <p class="text-xs sm:text-sm text-slate-300">
+                    Moteur de pivot automatisé : prend un identifiant clé (téléphone ou email) et extrait automatiquement tous les enregistrements croisés associés à cette même identité à travers l'ensemble des sources.
+                </p>
+
+                <!-- Paramètres -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Paramètres d'URL (Query Parameters)</h4>
+                    <div class="overflow-x-auto custom-scroll border border-slate-800 rounded-lg">
+                        <table class="w-full text-left text-xs text-slate-300 min-w-[500px]">
+                            <thead class="bg-dark/60 text-slate-400 font-mono text-[11px] border-b border-slate-800">
+                                <tr>
+                                    <th class="py-2.5 px-3">Paramètre</th>
+                                    <th class="px-3">Type</th>
+                                    <th class="px-3">Obligatoire</th>
+                                    <th class="px-3">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 font-mono text-[11px]">
+                                <tr>
+                                    <td class="py-2 px-3 text-purple-400 font-bold">tel</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-400">Conditionnel</td>
+                                    <td class="px-3 text-slate-300 font-sans">Pivot à partir d'un numéro de téléphone.</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 text-purple-400 font-bold">mail</td>
+                                    <td class="px-3 text-slate-400">string</td>
+                                    <td class="px-3 text-slate-400">Conditionnel</td>
+                                    <td class="px-3 text-slate-300 font-sans">Pivot à partir d'une adresse email.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-[11px] text-slate-400 italic">Au moins l'un des deux paramètres (<code class="text-slate-300">tel</code> ou <code class="text-slate-300">mail</code>) est obligatoire.</p>
+                </div>
+
+                <!-- Exemple Réponse JSON -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Exemple de Réponse Graph/Correlation (200 OK)</h4>
+                    <pre class="bg-dark p-3.5 rounded-lg text-[11px] font-mono text-purple-300 overflow-x-auto border border-slate-800 custom-scroll"><code>{
+  "pivot": "0612345678",
+  "total_correlations": 3,
+  "sources_matched": ["FR_OPERATEUR_2021", "FR_ECOMMERCE_2023", "DELIVERY_PARIS_2024"],
+  "identities": [
+    {
+      "nom": "DUPONT",
+      "prenom": "Jean",
+      "emails_associes": ["jean.dupont85@gmail.com", "jdupont@entreprise.fr"],
+      "adresses_connues": [
+        "14 RUE DE LA PAIX, 75002 PARIS",
+        "8 BD DES ITALIENS, 75009 PARIS"
+      ],
+      "derniere_activite": "2024-02-18"
+    }
+  ]
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Exemples d'implémentation -->
+        <section id="snippets" class="space-y-4">
+            <div class="border-b border-slate-800 pb-3">
+                <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-code text-blue-500 text-base"></i> Exemples de code
+                </h2>
+                <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Intégration rapide dans vos scripts d'investigation ou outils internes.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- cURL -->
+                <div class="bg-surface rounded-xl border border-slate-800 p-4 space-y-2 flex flex-col justify-between">
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-300">
+                            <i class="fa-solid fa-terminal text-blue-400"></i> cURL
+                        </div>
+                        <pre class="bg-dark p-3 rounded text-[11px] font-mono text-slate-300 overflow-x-auto border border-slate-800 custom-scroll"><code>curl -G "https://brixhub.uned.live/v1/search" \
+  -H "Authorization: Bearer VOTRE_CLE_API" \
+  --data-urlencode "nom=DUPONT" \
+  --data-urlencode "ville=PARIS" \
+  --data-urlencode "limit=10"</code></pre>
+                    </div>
+                </div>
+
+                <!-- Python -->
+                <div class="bg-surface rounded-xl border border-slate-800 p-4 space-y-2 flex flex-col justify-between">
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-300">
+                            <i class="fa-brands fa-python text-emerald-400"></i> Python (requests)
+                        </div>
+                        <pre class="bg-dark p-3 rounded text-[11px] font-mono text-slate-300 overflow-x-auto border border-slate-800 custom-scroll"><code>import requests
+
+headers = {"Authorization": "Bearer VOTRE_CLE_API"}
+params = {
+    "nom": "DUPONT",
+    "tel": "0612345678"
+}
+
+r = requests.get(
+    "https://brixhub.uned.live/v1/search",
+    headers=headers,
+    params=params,
+    timeout=10
+)
+
+data = r.json()
+print(f"Trouvé: {len(data)} enregistrements")</code></pre>
+                    </div>
+                </div>
+
+                <!-- Node.js / JavaScript -->
+                <div class="bg-surface rounded-xl border border-slate-800 p-4 space-y-2 flex flex-col justify-between">
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-300">
+                            <i class="fa-brands fa-js text-yellow-400"></i> JavaScript (Fetch)
+                        </div>
+                        <pre class="bg-dark p-3 rounded text-[11px] font-mono text-slate-300 overflow-x-auto border border-slate-800 custom-scroll"><code>const params = new URLSearchParams({ nom: 'DUPONT', ville: 'PARIS' });
+
+const res = await fetch(`https://brixhub.uned.live/v1/search?${params}`, {
+  headers: {
+    'Authorization': 'Bearer VOTRE_CLE_API'
+  }
+});
+
+if (res.ok) {
+  const data = await res.json();
+  console.log(data);
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Codes d'Erreurs & Format HTTP -->
+        <section id="errors" class="space-y-4">
+            <div class="border-b border-slate-800 pb-3">
+                <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-base"></i> Codes d'État & Gestion d'Erreurs
+                </h2>
+                <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Les erreurs API retournent un code HTTP standardisé et un payload d'erreur au format JSON.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="overflow-x-auto custom-scroll border border-slate-800 rounded-lg">
+                    <table class="w-full text-left text-xs text-slate-300 min-w-[400px]">
+                        <thead class="bg-surface text-slate-400 font-mono text-[11px] border-b border-slate-800">
+                            <tr>
+                                <th class="py-2.5 px-3">Code HTTP</th>
+                                <th class="px-3">Statut</th>
+                                <th class="px-3">Signification & Cause</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-800/60 font-mono text-[11px]">
-                            <tr><td class="py-1.5 text-blue-400">nom</td><td>string</td><td>Nom de famille</td></tr>
-                            <tr><td class="py-1.5 text-blue-400">prenom</td><td>string</td><td>Prénom</td></tr>
-                            <tr><td class="py-1.5 text-blue-400">tel</td><td>string</td><td>Numéro de téléphone</td></tr>
-                            <tr><td class="py-1.5 text-blue-400">mail</td><td>string</td><td>Adresse email</td></tr>
+                            <tr>
+                                <td class="py-2 px-3 text-emerald-400 font-bold">200</td>
+                                <td class="px-3 text-slate-300 font-sans">OK</td>
+                                <td class="px-3 text-slate-400 font-sans">Requête traitée avec succès.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-amber-400 font-bold">400</td>
+                                <td class="px-3 text-slate-300 font-sans">Bad Request</td>
+                                <td class="px-3 text-slate-400 font-sans">Critère manquant ou syntaxe invalide.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-red-400 font-bold">401</td>
+                                <td class="px-3 text-slate-300 font-sans">Unauthorized</td>
+                                <td class="px-3 text-slate-400 font-sans">En-tête Authorization absent ou format Bearer invalide.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-red-400 font-bold">403</td>
+                                <td class="px-3 text-slate-300 font-sans">Forbidden</td>
+                                <td class="px-3 text-slate-400 font-sans">Clé révoquée, expirée ou niveau de plan insuffisant pour cet endpoint.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-amber-400 font-bold">429</td>
+                                <td class="px-3 text-slate-300 font-sans">Too Many Requests</td>
+                                <td class="px-3 text-slate-400 font-sans">Quota quotidien de requêtes dépassé ou rate-limit par seconde atteint.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-red-400 font-bold">500</td>
+                                <td class="px-3 text-slate-300 font-sans">Internal Error</td>
+                                <td class="px-3 text-slate-400 font-sans">Erreur interne du moteur de stockage ou de base de données.</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
-                <pre class="bg-dark p-3 rounded-lg text-[11px] font-mono text-slate-300 overflow-x-auto border border-slate-800"><code>curl -X GET "https://brixhub.uned.live/v1/search?nom=DUPONT" -H "Authorization: Bearer VOTRE_CLE"</code></pre>
-            </div>
 
-            <!-- Endpoint 2 -->
-            <div class="bg-surface rounded-xl border border-slate-800 p-4 sm:p-6 space-y-3">
-                <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-mono text-xs font-bold border border-purple-500/20">GET</span>
-                    <span class="font-mono text-xs sm:text-sm text-white font-semibold">/v1/correlations</span>
+                <div class="bg-surface rounded-xl border border-slate-800 p-4 space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Format Payload Erreur (4xx / 5xx)</h4>
+                    <pre class="bg-dark p-3.5 rounded-lg text-[11px] font-mono text-red-400 overflow-x-auto border border-slate-800 custom-scroll"><code>{
+  "error": true,
+  "status_code": 429,
+  "code": "DAILY_QUOTA_EXCEEDED",
+  "detail": "Votre quota quotidien de 1 000 requêtes est épuisé.",
+  "reset_timestamp": 1774828800
+}</code></pre>
                 </div>
-                <pre class="bg-dark p-3 rounded-lg text-[11px] font-mono text-slate-300 overflow-x-auto border border-slate-800"><code>curl -X GET "https://brixhub.uned.live/v1/correlations?tel=0612345678" -H "Authorization: Bearer VOTRE_CLE"</code></pre>
             </div>
         </section>
 
     </main>
 
-    <footer class="border-t border-slate-800 bg-surface/50 py-5 text-xs text-slate-500 text-center">
-        &copy; 2026 BrixHub OSINT Engine
+    <footer class="border-t border-slate-800 bg-surface/50 py-6 text-xs text-slate-500 text-center">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div>&copy; 2026 BrixHub OSINT Engine &bull; Tous droits réservés.</div>
+            <div class="flex items-center gap-4 text-slate-400">
+                <a href="/" class="hover:text-white transition">Recherche Web</a>
+                <a href="https://t.me/leakfrench" target="_blank" class="hover:text-blue-400 transition">Contact Telegram</a>
+            </div>
+        </div>
     </footer>
 
 </body>
