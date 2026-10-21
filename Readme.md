@@ -1,9 +1,3 @@
-Voici la documentation complète, exhaustive et professionnelle au format Markdown (fichier `README.md`), incluant l'ensemble des composants modernes mis en place (FastAPI, ClickHouse, Redis, SMTP OTP, Traefik v3, n8n, limitations strictes et documentation API), ainsi que le script SQL/Bash dédié pour importer et créer la vue unifiée sur ClickHouse.
-
----
-
-# Copie intégrale du `README.md`
-
 ```markdown
 # ⚡ BrixHub OSINT Engine & API Platform
 
