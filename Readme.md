@@ -1,4 +1,3 @@
-```markdown
 # ⚡ BrixHub OSINT Engine & API Platform
 
 <p align="center">
