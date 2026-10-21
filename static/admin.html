@@ -29,18 +29,18 @@
 </head>
 <body class="bg-dark text-slate-200 min-h-screen flex flex-col font-sans">
 
-    <!-- Header Responsive -->
+    <!-- Header -->
     <header class="border-b border-slate-800 bg-surface/80 backdrop-blur sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded bg-red-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-lg shadow-red-500/20">A</div>
-                <span class="font-bold text-sm sm:text-lg text-white">BrixHub <span class="text-red-400 text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/10">ADMIN</span></span>
+                <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-red-500/20">A</div>
+                <span class="font-bold text-sm sm:text-lg text-white">BrixHub <span class="text-red-400 text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20">MASTER CONTROL</span></span>
             </div>
             <div class="flex items-center gap-2 sm:gap-4 text-xs">
-                <button onclick="fetchKeys()" class="text-slate-400 hover:text-white p-1.5 bg-slate-800 rounded">
-                    <i class="fa-solid fa-arrows-rotate"></i>
+                <button onclick="refreshData()" class="text-slate-400 hover:text-white p-1.5 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg transition">
+                    <i class="fa-solid fa-arrows-rotate sm:mr-1"></i><span class="hidden sm:inline">Actualiser</span>
                 </button>
-                <a href="/" target="_blank" class="hidden sm:inline text-slate-400 hover:text-white transition">App</a>
+                <a href="/" target="_blank" class="hidden sm:inline text-slate-400 hover:text-white transition">App publique</a>
                 <button onclick="logout()" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-[11px]">
                     <i class="fa-solid fa-arrow-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Déconnexion</span>
                 </button>
@@ -50,133 +50,250 @@
 
     <main class="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8 flex-1 w-full space-y-6">
         
-        <!-- Stats Grille 2x2 Mobile / 4 Cols Desktop -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
-            <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
-                <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Total Clés</div>
-                <div id="statTotal" class="text-xl sm:text-2xl font-extrabold text-white mt-0.5">-</div>
-            </div>
-            <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
-                <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Clés Actives</div>
-                <div id="statActive" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-0.5">-</div>
-            </div>
-            <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
-                <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Req Aujourd'hui</div>
-                <div id="statReqToday" class="text-xl sm:text-2xl font-extrabold text-cyan-400 mt-0.5">-</div>
-            </div>
-            <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
-                <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Plans Pro/VIP</div>
-                <div id="statPro" class="text-xl sm:text-2xl font-extrabold text-blue-400 mt-0.5">-</div>
+        <!-- Navigation Onglets Principaux -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div class="flex gap-2 text-xs font-semibold">
+                <button id="tabBtnKeys" onclick="switchMainTab('keys')" class="px-4 py-2 rounded-xl bg-blue-600 text-white transition flex items-center gap-2">
+                    <i class="fa-solid fa-key"></i> <span>Clés API (<span id="countKeys">0</span>)</span>
+                </button>
+                <button id="tabBtnUsers" onclick="switchMainTab('users')" class="px-4 py-2 rounded-xl bg-surface hover:bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-2 border border-slate-800">
+                    <i class="fa-solid fa-users"></i> <span>Comptes Utilisateurs (<span id="countUsers">0</span>)</span>
+                </button>
             </div>
         </div>
 
-        <!-- Action Bar Mobile-First -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div class="relative w-full sm:w-80">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-xs"></i>
-                <input type="text" id="searchInput" oninput="filterKeys()" placeholder="Rechercher une clé, email..."
-                       class="w-full pl-9 pr-4 py-2 bg-surface border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
+        <!-- ================= ONGLET 1 : CLÉS API ================= -->
+        <div id="tabContentKeys" class="space-y-6">
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+                <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                    <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Total Clés</div>
+                    <div id="statTotalKeys" class="text-xl sm:text-2xl font-extrabold text-white mt-0.5">-</div>
+                </div>
+                <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                    <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Clés Actives</div>
+                    <div id="statActiveKeys" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-0.5">-</div>
+                </div>
+                <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                    <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Req API Aujourd'hui</div>
+                    <div id="statReqToday" class="text-xl sm:text-2xl font-extrabold text-cyan-400 mt-0.5">-</div>
+                </div>
+                <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                    <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Plans Pro / Illimités</div>
+                    <div id="statProKeys" class="text-xl sm:text-2xl font-extrabold text-blue-400 mt-0.5">-</div>
+                </div>
             </div>
-            <button onclick="openCreateModal()" class="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
-                <i class="fa-solid fa-plus"></i> Créer une clé API
-            </button>
+
+            <!-- Barre d'action Clés -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div class="relative w-full sm:w-80">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-xs"></i>
+                    <input type="text" id="searchKeysInput" oninput="filterKeys()" placeholder="Rechercher clé, label, email..."
+                           class="w-full pl-9 pr-4 py-2 bg-surface border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
+                </div>
+                <button onclick="openCreateModal()" class="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+                    <i class="fa-solid fa-plus"></i> Générer une clé API
+                </button>
+            </div>
+
+            <!-- Table des Clés -->
+            <div class="bg-surface border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+                <div class="overflow-x-auto custom-scroll">
+                    <table class="w-full text-left text-xs text-slate-300 min-w-[750px]">
+                        <thead class="bg-dark/70 text-slate-400 uppercase font-mono border-b border-slate-800 text-[10px]">
+                            <tr>
+                                <th class="py-3 px-4">Statut</th>
+                                <th class="py-3 px-4">Label & Client</th>
+                                <th class="py-3 px-4">Création</th>
+                                <th class="py-3 px-4">Aperçu</th>
+                                <th class="py-3 px-4">Plan</th>
+                                <th class="py-3 px-4">Consommation Aujourd'hui</th>
+                                <th class="py-3 px-4 text-emerald-400">Restant</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="keysTableBody" class="divide-y divide-slate-800/60 font-sans">
+                            <tr><td colspan="8" class="py-8 text-center text-slate-500">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <!-- Table des clés avec Défilement Tactile Doux -->
-        <div class="bg-surface border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-            <div class="overflow-x-auto custom-scroll">
-                <table class="w-full text-left text-xs text-slate-300 min-w-[750px]">
-                    <thead class="bg-dark/70 text-slate-400 uppercase font-mono border-b border-slate-800 text-[10px]">
-                        <tr>
-                            <th class="py-3 px-4">Statut</th>
-                            <th class="py-3 px-4">Label & Propriétaire</th>
-                            <th class="py-3 px-4">Création</th>
-                            <th class="py-3 px-4">Aperçu</th>
-                            <th class="py-3 px-4">Plan</th>
-                            <th class="py-3 px-4">Utilisé / Quota</th>
-                            <th class="py-3 px-4 text-emerald-400">Restant</th>
-                            <th class="py-3 px-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="keysTableBody" class="divide-y divide-slate-800/60 font-sans">
-                        <tr><td colspan="8" class="py-8 text-center text-slate-500">Chargement...</td></tr>
-                    </tbody>
-                </table>
+        <!-- ================= ONGLET 2 : COMPTES UTILISATEURS ================= -->
+        <div id="tabContentUsers" class="hidden space-y-6">
+            <!-- Stats Users -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+                <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                    <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Total Comptes</div>
+                    <div id="statTotalUsers" class="text-xl sm:text-2xl font-extrabold text-white mt-0.5">-</div>
+                </div>
+                <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                    <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Comptes Actifs</div>
+                    <div id="statActiveUsers" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-0.5">-</div>
+                </div>
+                <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                    <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Comptes Illimités (Clé liée)</div>
+                    <div id="statUnlimitedUsers" class="text-xl sm:text-2xl font-extrabold text-blue-400 mt-0.5">-</div>
+                </div>
+                <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5">
+                    <div class="text-slate-400 text-[10px] sm:text-xs font-medium">Comptes Bannis</div>
+                    <div id="statBannedUsers" class="text-xl sm:text-2xl font-extrabold text-red-400 mt-0.5">-</div>
+                </div>
+            </div>
+
+            <!-- Barre de filtre Users -->
+            <div class="flex items-center justify-between gap-3">
+                <div class="relative w-full sm:w-80">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-xs"></i>
+                    <input type="text" id="searchUsersInput" oninput="filterUsers()" placeholder="Rechercher par email..."
+                           class="w-full pl-9 pr-4 py-2 bg-surface border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                </div>
+            </div>
+
+            <!-- Table des Utilisateurs -->
+            <div class="bg-surface border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+                <div class="overflow-x-auto custom-scroll">
+                    <table class="w-full text-left text-xs text-slate-300 min-w-[750px]">
+                        <thead class="bg-dark/70 text-slate-400 uppercase font-mono border-b border-slate-800 text-[10px]">
+                            <tr>
+                                <th class="py-3 px-4">Statut</th>
+                                <th class="py-3 px-4">Email Officiel</th>
+                                <th class="py-3 px-4">Date d'inscription</th>
+                                <th class="py-3 px-4">Plan Actif</th>
+                                <th class="py-3 px-4">Clé API Liée</th>
+                                <th class="py-3 px-4">Usage Aujourd'hui</th>
+                                <th class="py-3 px-4 text-right">Actions de Gestion</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody" class="divide-y divide-slate-800/60 font-sans">
+                            <tr><td colspan="7" class="py-8 text-center text-slate-500">Chargement des utilisateurs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
     </main>
 
-    <!-- Modal Détails Clé Tactile & Responsive -->
+    <!-- Modal Détails Clé API (Logs REST + Quotas) -->
     <div id="detailsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-        <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-5xl p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-2xl flex flex-col max-h-[92vh]">
-            
+        <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-5xl p-4 sm:p-6 space-y-4 shadow-2xl flex flex-col max-h-[92vh]">
             <div class="flex items-start justify-between border-b border-slate-800 pb-3">
-                <div class="pr-2">
-                    <div class="flex items-center gap-2">
-                        <h3 id="detModalTitle" class="font-bold text-white text-sm sm:text-lg truncate max-w-[200px] sm:max-w-md">Détails de la clé</h3>
-                        <span id="detModalBadge"></span>
-                    </div>
-                    <p id="detModalSubtitle" class="text-[10px] sm:text-xs text-slate-400 font-mono truncate max-w-[250px] sm:max-w-lg mt-0.5"></p>
+                <div>
+                    <h3 id="detModalTitle" class="font-bold text-white text-base">Détails de la clé API</h3>
+                    <p id="detModalSubtitle" class="text-xs text-slate-400 font-mono"></p>
                 </div>
-                <button onclick="closeDetailsModal()" class="text-slate-500 hover:text-white text-lg p-1">✕</button>
+                <button onclick="closeDetailsModal()" class="text-slate-500 hover:text-white text-lg">✕</button>
             </div>
 
-            <!-- Grille Métriques 2x2 Mobile -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                <div class="bg-dark/80 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
-                    <div class="text-slate-400 text-[10px]">Créée le</div>
-                    <div id="detCreatedAt" class="font-mono text-slate-200 mt-0.5 text-xs font-semibold">-</div>
-                </div>
-                <div class="bg-dark/80 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
-                    <div class="text-slate-400 text-[10px]">Utilisé ajd</div>
-                    <div id="detUsedToday" class="font-mono text-cyan-400 mt-0.5 font-bold text-xs sm:text-sm">-</div>
-                </div>
-                <div class="bg-dark/80 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
-                    <div class="text-slate-400 text-[10px]">Restant</div>
-                    <div id="detRemainingToday" class="font-mono text-emerald-400 mt-0.5 font-bold text-xs sm:text-sm">-</div>
-                </div>
-                <div class="bg-dark/80 border border-slate-800 p-2.5 sm:p-3 rounded-xl flex items-center justify-between">
-                    <div>
-                        <div class="text-slate-400 text-[10px]">Plan</div>
-                        <div id="detPlanName" class="font-mono text-blue-400 mt-0.5 font-bold text-xs uppercase">-</div>
-                    </div>
-                    <button id="detResetQuotaBtn" class="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded text-[10px] font-medium transition">
-                        Reset
-                    </button>
-                </div>
+            <div class="overflow-y-auto overflow-x-auto custom-scroll flex-1 border border-slate-800 rounded-xl bg-dark/40">
+                <table class="w-full text-left text-xs text-slate-300 min-w-[550px]">
+                    <thead class="bg-dark text-slate-400 font-mono sticky top-0 border-b border-slate-800 text-[10px]">
+                        <tr>
+                            <th class="py-2 px-3">Date</th>
+                            <th class="py-2 px-3">IP</th>
+                            <th class="py-2 px-3">Requête / URL</th>
+                            <th class="py-2 px-3">Code</th>
+                            <th class="py-2 px-3 text-right">Latence</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detLogsTableBody" class="divide-y divide-slate-800/60 font-mono text-[10px]"></tbody>
+                </table>
             </div>
 
-            <!-- Table Logs Mobile Scrollable -->
-            <div class="space-y-2 flex-1 flex flex-col min-h-0">
-                <div class="flex items-center justify-between text-xs">
-                    <span class="font-semibold text-slate-300">Historique des requêtes</span>
-                    <span id="detLogsCount" class="text-[10px] text-slate-500 font-mono"></span>
-                </div>
-                <div class="overflow-y-auto overflow-x-auto custom-scroll flex-1 border border-slate-800 rounded-xl bg-dark/40">
-                    <table class="w-full text-left text-xs text-slate-300 min-w-[550px]">
-                        <thead class="bg-dark text-slate-400 font-mono sticky top-0 border-b border-slate-800 text-[10px]">
-                            <tr>
-                                <th class="py-2 px-3">Date</th>
-                                <th class="py-2 px-3">IP</th>
-                                <th class="py-2 px-3">URL Complète</th>
-                                <th class="py-2 px-3">Code</th>
-                                <th class="py-2 px-3 text-right">Latence</th>
-                            </tr>
-                        </thead>
-                        <tbody id="detLogsTableBody" class="divide-y divide-slate-800/60 font-mono text-[10px]"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between border-t border-slate-800 pt-3">
-                <div id="detActionButtons"></div>
-                <button onclick="closeDetailsModal()" class="px-3.5 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-medium">Fermer</button>
+            <div class="flex justify-end pt-2">
+                <button onclick="closeDetailsModal()" class="px-4 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs">Fermer</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Création Clé -->
+    <!-- Modal Logs de Recherche WEB d'un Utilisateur -->
+    <div id="userLogsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-4xl p-4 sm:p-6 space-y-4 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex items-start justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="font-bold text-white text-base flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i>
+                        <span>Historique des recherches du site</span>
+                    </h3>
+                    <p id="userLogsSubtitle" class="text-xs text-slate-400 font-mono mt-0.5"></p>
+                </div>
+                <button onclick="closeUserLogsModal()" class="text-slate-500 hover:text-white text-lg">✕</button>
+            </div>
+
+            <div class="overflow-y-auto overflow-x-auto custom-scroll flex-1 border border-slate-800 rounded-xl bg-dark/40">
+                <table class="w-full text-left text-xs text-slate-300 min-w-[500px]">
+                    <thead class="bg-dark text-slate-400 font-mono sticky top-0 border-b border-slate-800 text-[10px]">
+                        <tr>
+                            <th class="py-2 px-3">Date</th>
+                            <th class="py-2 px-3">IP</th>
+                            <th class="py-2 px-3">Critères Saisis</th>
+                            <th class="py-2 px-3 text-right">Résultats Trouvés</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userLogsTableBody" class="divide-y divide-slate-800/60 font-mono text-[11px]"></tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeUserLogsModal()" class="px-4 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Lier une Clé API à un Compte (Admin) -->
+    <div id="linkKeyModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+        <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h3 class="font-bold text-white text-sm">Associer une Clé API au Compte</h3>
+                <button onclick="closeLinkKeyModal()" class="text-slate-500 hover:text-white">✕</button>
+            </div>
+            <p id="linkKeyUserEmail" class="text-xs text-slate-400 font-mono"></p>
+
+            <form id="formAdminLinkKey" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Sélectionner une Clé API existante</label>
+                    <select id="selectApiKey" class="w-full px-3 py-2 bg-dark border border-slate-700 rounded-lg text-white font-mono"></select>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Forfait attribué au compte</label>
+                    <select id="selectUserPlan" class="w-full px-3 py-2 bg-dark border border-slate-700 rounded-lg text-white font-mono">
+                        <option value="pro">pro (Accès Illimité Web)</option>
+                        <option value="starter">starter (Accès Illimité Web)</option>
+                        <option value="enterprise">enterprise (Accès Illimité Web)</option>
+                        <option value="free">free (5 req/j)</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold transition mt-2">
+                    Confirmer l'association
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Reset Mot de Passe (Admin) -->
+    <div id="resetPassModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+        <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h3 class="font-bold text-white text-sm">Réinitialiser le mot de passe</h3>
+                <button onclick="closeResetPassModal()" class="text-slate-500 hover:text-white">✕</button>
+            </div>
+            <p id="resetPassUserEmail" class="text-xs text-slate-400 font-mono"></p>
+            <form id="formAdminResetPass" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Nouveau mot de passe temporaire</label>
+                    <input type="text" id="adminNewPass" required minlength="6" placeholder="Ex: TempPass992!"
+                           class="w-full px-3 py-2 bg-dark border border-slate-700 rounded-lg text-white font-mono">
+                </div>
+                <button type="submit" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold transition mt-2">
+                    Appliquer le mot de passe
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Création Nouvelle Clé -->
     <div id="createModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3">
         <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -185,12 +302,12 @@
             </div>
             <form id="createKeyForm" class="space-y-3 text-xs">
                 <div>
-                    <label class="block text-slate-400 mb-1">Nom / Label</label>
+                    <label class="block text-slate-400 mb-1">Label</label>
                     <input type="text" id="newLabel" required placeholder="Client Telegram" class="w-full px-3 py-2 bg-dark border border-slate-700 rounded-lg text-white">
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">Email</label>
-                    <input type="email" id="newEmail" required placeholder="contact@domaine.com" class="w-full px-3 py-2 bg-dark border border-slate-700 rounded-lg text-white">
+                    <input type="email" id="newEmail" required placeholder="client@gmail.com" class="w-full px-3 py-2 bg-dark border border-slate-700 rounded-lg text-white">
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">Plan</label>
@@ -208,7 +325,7 @@
         </div>
     </div>
 
-    <!-- Modal Copie Clé Brute -->
+    <!-- Modal Affichage Clé Générée -->
     <div id="showKeyModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3">
         <div class="bg-surface border border-emerald-500/40 rounded-2xl w-full max-w-md p-5 space-y-3">
             <h3 class="font-bold text-white text-sm text-center">Clé API Générée</h3>
@@ -222,7 +339,27 @@
 
     <script>
         let allKeys = [];
-        let currentOpenKeyId = null;
+        let allUsers = [];
+        let currentTargetUserId = null;
+
+        function switchMainTab(tab) {
+            const btnKeys = document.getElementById('tabBtnKeys');
+            const btnUsers = document.getElementById('tabBtnUsers');
+            const secKeys = document.getElementById('tabContentKeys');
+            const secUsers = document.getElementById('tabContentUsers');
+
+            if (tab === 'keys') {
+                btnKeys.className = "px-4 py-2 rounded-xl bg-blue-600 text-white transition flex items-center gap-2";
+                btnUsers.className = "px-4 py-2 rounded-xl bg-surface hover:bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-2 border border-slate-800";
+                secKeys.classList.remove('hidden');
+                secUsers.classList.add('hidden');
+            } else {
+                btnUsers.className = "px-4 py-2 rounded-xl bg-indigo-600 text-white transition flex items-center gap-2";
+                btnKeys.className = "px-4 py-2 rounded-xl bg-surface hover:bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-2 border border-slate-800";
+                secUsers.classList.remove('hidden');
+                secKeys.classList.add('hidden');
+            }
+        }
 
         function formatDate(val) {
             if (!val) return '-';
@@ -233,35 +370,36 @@
             } catch (e) { return String(val); }
         }
 
+        async function refreshData() {
+            await fetchKeys(); await fetchUsers();
+        }
+
+        // --- GESTION DES CLÉS API ---
         async function fetchKeys() {
             try {
                 const res = await fetch('/admin/api/keys');
                 if (res.status === 401) { window.location.href = '/admin/login'; return; }
                 allKeys = await res.json();
-                renderTable(allKeys);
-                updateStats(allKeys);
-                if (currentOpenKeyId) {
-                    const refreshed = allKeys.find(k => k.key_id === currentOpenKeyId);
-                    if (refreshed) openDetailsModal(refreshed.key_id, false);
-                }
+                document.getElementById('countKeys').innerText = allKeys.length;
+                renderKeysTable(allKeys);
+                updateKeysStats(allKeys);
             } catch (e) {}
         }
 
-        function updateStats(keys) {
-            document.getElementById('statTotal').innerText = keys.length;
-            document.getElementById('statActive').innerText = keys.filter(k => k.is_active === 1).length;
+        function updateKeysStats(keys) {
+            document.getElementById('statTotalKeys').innerText = keys.length;
+            document.getElementById('statActiveKeys').innerText = keys.filter(k => k.is_active === 1).length;
             const totalReq = keys.reduce((acc, k) => acc + (k.used_today || 0), 0);
             document.getElementById('statReqToday').innerText = totalReq.toLocaleString();
-            document.getElementById('statPro').innerText = keys.filter(k => ['pro', 'enterprise'].includes(k.plan)).length;
+            document.getElementById('statProKeys').innerText = keys.filter(k => ['pro', 'enterprise'].includes(k.plan)).length;
         }
 
-        function renderTable(keys) {
+        function renderKeysTable(keys) {
             const tbody = document.getElementById('keysTableBody');
             if (!keys.length) {
                 tbody.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-slate-500">Aucune clé.</td></tr>';
                 return;
             }
-
             tbody.innerHTML = keys.map(k => {
                 const used = k.used_today || 0;
                 const max = k.quota_per_day || 0;
@@ -273,37 +411,37 @@
                 if (pct >= 100) badgeColor = 'bg-red-500';
 
                 return `
-                <tr class="hover:bg-card/60 cursor-pointer transition" onclick="openDetailsModal('${k.key_id}')">
-                    <td class="py-2.5 px-3">
+                <tr class="hover:bg-card/60 cursor-pointer transition" onclick="openKeyDetails('${k.key_id}', '${escapeHtml(k.label || k.preview)}')">
+                    <td class="py-2.5 px-4">
                         ${k.is_active === 1 
                             ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[9px] border border-emerald-500/20">ACTIF</span>'
-                            : '<span class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-mono text-[9px] border border-red-500/20">OFF</span>'}
+                            : '<span class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-mono text-[9px] border border-red-500/20">RÉVOQUÉ</span>'}
                     </td>
-                    <td class="py-2.5 px-3">
-                        <div class="font-semibold text-white truncate max-w-[140px]">${escapeHtml(k.label || '-')}</div>
-                        <div class="text-[10px] text-slate-500 font-mono truncate max-w-[140px]">${escapeHtml(k.owner_email || '-')}</div>
+                    <td class="py-2.5 px-4">
+                        <div class="font-semibold text-white">${escapeHtml(k.label || '-')}</div>
+                        <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(k.owner_email || '-')}</div>
                     </td>
-                    <td class="py-2.5 px-3 text-slate-400 font-mono text-[10px]">${formatDate(k.created_at)}</td>
-                    <td class="py-2.5 px-3 font-mono text-slate-300 text-[10px]">${k.preview || '-'}</td>
-                    <td class="py-2.5 px-3" onclick="event.stopPropagation()">
-                        <select onchange="changePlan('${k.key_id}', this.value)" class="bg-dark border border-slate-700 rounded px-1.5 py-0.5 text-[11px] font-mono text-blue-400">
+                    <td class="py-2.5 px-4 text-slate-400 font-mono text-[10px]">${formatDate(k.created_at)}</td>
+                    <td class="py-2.5 px-4 font-mono text-slate-300 text-[10px]">${k.preview || '-'}</td>
+                    <td class="py-2.5 px-4" onclick="event.stopPropagation()">
+                        <select onchange="changeKeyPlan('${k.key_id}', this.value)" class="bg-dark border border-slate-700 rounded px-2 py-1 text-xs font-mono text-blue-400">
                             <option value="free" ${k.plan === 'free' ? 'selected' : ''}>free</option>
                             <option value="starter" ${k.plan === 'starter' ? 'selected' : ''}>starter</option>
                             <option value="pro" ${k.plan === 'pro' ? 'selected' : ''}>pro</option>
                             <option value="enterprise" ${k.plan === 'enterprise' ? 'selected' : ''}>enterprise</option>
                         </select>
                     </td>
-                    <td class="py-2.5 px-3">
+                    <td class="py-2.5 px-4">
                         <div class="w-24 bg-slate-800 rounded-full h-1.5 overflow-hidden">
                             <div class="${badgeColor} h-full" style="width: ${max === 0 ? 5 : pct}%"></div>
                         </div>
                         <span class="text-[10px] text-slate-400 font-mono">${used}/${max === 0 ? '∞' : max}</span>
                     </td>
-                    <td class="py-2.5 px-3 font-mono font-bold text-[11px] ${remaining <= 0 && max > 0 ? 'text-red-400' : 'text-emerald-400'}">
+                    <td class="py-2.5 px-4 font-mono font-bold text-xs ${remaining <= 0 && max > 0 ? 'text-red-400' : 'text-emerald-400'}">
                         ${max === 0 ? 'Illimité' : remaining.toLocaleString()}
                     </td>
-                    <td class="py-2.5 px-3 text-right space-x-1" onclick="event.stopPropagation()">
-                        <button onclick="resetQuota('${k.key_id}')" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px] border border-amber-500/20">Reset</button>
+                    <td class="py-2.5 px-4 text-right space-x-1" onclick="event.stopPropagation()">
+                        <button onclick="resetKeyQuota('${k.key_id}')" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px] border border-amber-500/20">Reset</button>
                         ${k.is_active === 1
                             ? `<button onclick="revokeKey('${k.key_id}')" class="px-2 py-0.5 bg-red-500/10 text-red-400 rounded text-[10px] border border-red-500/20">Ban</button>`
                             : `<button onclick="reactivateKey('${k.key_id}')" class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[10px] border border-emerald-500/20">On</button>`}
@@ -312,79 +450,224 @@
             }).join('');
         }
 
+        // --- GESTION DES UTILISATEURS ---
+        async function fetchUsers() {
+            try {
+                const res = await fetch('/admin/api/users');
+                if (!res.ok) return;
+                allUsers = await res.json();
+                document.getElementById('countUsers').innerText = allUsers.length;
+                renderUsersTable(allUsers);
+                updateUsersStats(allUsers);
+            } catch (e) {}
+        }
+
+        function updateUsersStats(users) {
+            document.getElementById('statTotalUsers').innerText = users.length;
+            document.getElementById('statActiveUsers').innerText = users.filter(u => u.is_active === 1).length;
+            document.getElementById('statUnlimitedUsers').innerText = users.filter(u => u.is_unlimited).length;
+            document.getElementById('statBannedUsers').innerText = users.filter(u => u.is_active === 0).length;
+        }
+
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('usersTableBody');
+            if (!users.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500">Aucun compte utilisateur créé.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(u => {
+                const isBanned = u.is_active === 0;
+                const isUnlimited = u.is_unlimited;
+
+                return `
+                <tr class="hover:bg-card/60 transition">
+                    <td class="py-3 px-4">
+                        ${!isBanned 
+                            ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-mono border border-emerald-500/20">ACTIF</span>'
+                            : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[9px] font-mono border border-red-500/20">BANNI</span>'}
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="font-semibold text-white select-all">${escapeHtml(u.email)}</div>
+                        <div class="text-[10px] text-slate-500 font-mono">ID: ${u.user_id.substring(0, 8)}...</div>
+                    </td>
+                    <td class="py-3 px-4 font-mono text-[11px] text-slate-400">${formatDate(u.created_at)}</td>
+                    <td class="py-3 px-4">
+                        <select onchange="changeUserPlan('${u.user_id}', this.value)" class="bg-dark border border-slate-700 rounded px-2 py-1 text-xs font-mono text-indigo-400">
+                            <option value="free" ${u.plan === 'free' ? 'selected' : ''}>free (5 req/j)</option>
+                            <option value="starter" ${u.plan === 'starter' ? 'selected' : ''}>starter (Illimité)</option>
+                            <option value="pro" ${u.plan === 'pro' ? 'selected' : ''}>pro (Illimité)</option>
+                            <option value="enterprise" ${u.plan === 'enterprise' ? 'selected' : ''}>enterprise (Illimité)</option>
+                        </select>
+                    </td>
+                    <td class="py-3 px-4 font-mono text-xs">
+                        ${u.api_key_id 
+                            ? `<span class="text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 select-all">${u.api_key_id.substring(0, 10)}...</span>` 
+                            : `<button onclick="openLinkKeyModal('${u.user_id}', '${escapeHtml(u.email)}')" class="text-slate-400 hover:text-white underline text-[11px]">+ Associer clé</button>`}
+                    </td>
+                    <td class="py-3 px-4 font-mono text-xs">
+                        ${isUnlimited 
+                            ? '<span class="text-emerald-400 font-bold">Illimité</span>' 
+                            : `<span class="${u.used_today >= 5 ? 'text-red-400 font-bold' : 'text-slate-300'}">${u.used_today} / 5</span>`}
+                    </td>
+                    <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                        <button onclick="viewUserLogs('${u.user_id}', '${escapeHtml(u.email)}')" title="Voir les recherches du site faites par ce compte"
+                                class="px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded text-[11px] transition">
+                            <i class="fa-solid fa-list-check mr-1"></i>Recherches
+                        </button>
+                        <button onclick="resetUserQuota('${u.user_id}')" title="Débloquer les 5 requêtes"
+                                class="px-2 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-[11px] transition">
+                            Reset Quota
+                        </button>
+                        <button onclick="openResetPassModal('${u.user_id}', '${escapeHtml(u.email)}')" title="Changer le mot de passe"
+                                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] transition">
+                            <i class="fa-solid fa-key"></i>
+                        </button>
+                        <button onclick="toggleUserBan('${u.user_id}')" title="${isBanned ? 'Débannir' : 'Bannir'}"
+                                class="px-2 py-1 ${isBanned ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'} rounded text-[11px] transition">
+                            ${isBanned ? 'Débannir' : 'Bannir'}
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        // --- ACTIONS UTILISATEUR ---
+        async function toggleUserBan(userId) {
+            if (!confirm('Changer le statut d\'accès de ce compte ?')) return;
+            const res = await fetch(`/admin/api/users/${userId}/status`, { method: 'PATCH' });
+            if (res.ok) fetchUsers();
+        }
+
+        async function resetUserQuota(userId) {
+            const res = await fetch(`/admin/api/users/${userId}/reset-quota`, { method: 'POST' });
+            if (res.ok) fetchUsers();
+        }
+
+        async function changeUserPlan(userId, plan) {
+            const res = await fetch(`/admin/api/users/${userId}/plan`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan })
+            });
+            if (res.ok) fetchUsers();
+        }
+
+        function openResetPassModal(userId, email) {
+            currentTargetUserId = userId;
+            document.getElementById('resetPassUserEmail').innerText = email;
+            document.getElementById('adminNewPass').value = '';
+            document.getElementById('resetPassModal').classList.remove('hidden');
+        }
+        function closeResetPassModal() { document.getElementById('resetPassModal').classList.add('hidden'); }
+
+        document.getElementById('formAdminResetPass').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const new_password = document.getElementById('adminNewPass').value;
+            const res = await fetch(`/admin/api/users/${currentTargetUserId}/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ new_password })
+            });
+            if (res.ok) {
+                alert('Mot de passe mis à jour avec succès !');
+                closeResetPassModal();
+            } else alert('Erreur');
+        });
+
+        function openLinkKeyModal(userId, email) {
+            currentTargetUserId = userId;
+            document.getElementById('linkKeyUserEmail').innerText = `Compte : ${email}`;
+            const sel = document.getElementById('selectApiKey');
+            sel.innerHTML = allKeys.map(k => `<option value="${k.key_id}">${k.preview} - ${k.label || 'Sans nom'} (${k.plan})</option>`).join('');
+            document.getElementById('linkKeyModal').classList.remove('hidden');
+        }
+        function closeLinkKeyModal() { document.getElementById('linkKeyModal').classList.add('hidden'); }
+
+        document.getElementById('formAdminLinkKey').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const key_id = document.getElementById('selectApiKey').value;
+            const plan = document.getElementById('selectUserPlan').value;
+            const res = await fetch(`/admin/api/users/${currentTargetUserId}/link-key`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key_id, plan })
+            });
+            if (res.ok) {
+                closeLinkKeyModal();
+                fetchUsers();
+            } else alert('Erreur');
+        });
+
+        async function viewUserLogs(userId, email) {
+            document.getElementById('userLogsSubtitle').innerText = `Compte : ${email}`;
+            const tbody = document.getElementById('userLogsTableBody');
+            tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500">Chargement des recherches...</td></tr>';
+            document.getElementById('userLogsModal').classList.remove('hidden');
+
+            try {
+                const res = await fetch(`/admin/api/users/${userId}/search-logs`);
+                const logs = await res.json();
+                if (!logs.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500">Aucune recherche effectuée par ce compte.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = logs.map(l => `
+                    <tr class="hover:bg-slate-800/40">
+                        <td class="py-2.5 px-3 text-slate-400 whitespace-nowrap">${formatDate(l.ts)}</td>
+                        <td class="py-2.5 px-3 text-emerald-400 select-all font-semibold">${l.client_ip || '-'}</td>
+                        <td class="py-2.5 px-3 text-slate-200 select-all break-all">${escapeHtml(l.criteria)}</td>
+                        <td class="py-2.5 px-3 text-right font-bold ${l.nb_results > 0 ? 'text-indigo-400' : 'text-slate-500'}">${l.nb_results}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-red-400">Erreur lors de la récupération des logs.</td></tr>';
+            }
+        }
+        function closeUserLogsModal() { document.getElementById('userLogsModal').classList.add('hidden'); }
+
+        // --- FILTRES ---
         function filterKeys() {
-            const q = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = allKeys.filter(k => 
+            const q = document.getElementById('searchKeysInput').value.toLowerCase();
+            renderKeysTable(allKeys.filter(k => 
                 (k.label || '').toLowerCase().includes(q) ||
                 (k.owner_email || '').toLowerCase().includes(q) ||
                 (k.preview || '').toLowerCase().includes(q)
-            );
-            renderTable(filtered);
+            ));
         }
 
-        async function openDetailsModal(keyId, fetchLogs = true) {
-            currentOpenKeyId = keyId;
-            const key = allKeys.find(k => k.key_id === keyId);
-            if (!key) return;
+        function filterUsers() {
+            const q = document.getElementById('searchUsersInput').value.toLowerCase();
+            renderUsersTable(allUsers.filter(u => (u.email || '').toLowerCase().includes(q)));
+        }
 
-            document.getElementById('detModalTitle').innerText = key.label || 'Sans nom';
-            document.getElementById('detModalSubtitle').innerText = `${key.preview} &bull; ${key.owner_email || ''}`;
-            document.getElementById('detModalBadge').innerHTML = key.is_active === 1
-                ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[9px] border border-emerald-500/20">ACTIF</span>'
-                : '<span class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-mono text-[9px] border border-red-500/20">RÉVOQUÉ</span>';
-
-            document.getElementById('detCreatedAt').innerText = formatDate(key.created_at);
-            document.getElementById('detPlanName').innerText = key.plan || 'FREE';
-            
-            const used = key.used_today || 0;
-            const max = key.quota_per_day || 0;
-            const remaining = key.remaining_today !== undefined ? key.remaining_today : (max - used);
-
-            document.getElementById('detUsedToday').innerText = `${used.toLocaleString()}`;
-            document.getElementById('detRemainingToday').innerText = max === 0 ? 'Illimité' : `${remaining.toLocaleString()}`;
-
-            document.getElementById('detResetQuotaBtn').onclick = () => resetQuota(key.key_id);
-
-            const actionsDiv = document.getElementById('detActionButtons');
-            actionsDiv.innerHTML = key.is_active === 1
-                ? `<button onclick="revokeKey('${key.key_id}')" class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-xs">Révoquer</button>`
-                : `<button onclick="reactivateKey('${key.key_id}')" class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-xs">Réactiver</button>`;
-
+        // Fonctions Clés Modal
+        async function openKeyDetails(keyId, label) {
+            document.getElementById('detModalTitle').innerText = label;
+            document.getElementById('detModalSubtitle').innerText = `ID: ${keyId}`;
+            const tbody = document.getElementById('detLogsTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">Chargement...</td></tr>';
             document.getElementById('detailsModal').classList.remove('hidden');
 
-            if (fetchLogs) {
-                const tbody = document.getElementById('detLogsTableBody');
-                tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">Chargement...</td></tr>';
-                try {
-                    const res = await fetch(`/admin/api/keys/${keyId}/logs`);
-                    const logs = await res.json();
-                    document.getElementById('detLogsCount').innerText = `${logs.length} requêtes`;
-                    if (!logs.length) {
-                        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">Aucune activité.</td></tr>';
-                        return;
-                    }
-                    tbody.innerHTML = logs.map(l => `
-                        <tr class="hover:bg-slate-800/40">
-                            <td class="py-2 px-2 text-slate-400 whitespace-nowrap">${formatDate(l.ts)}</td>
-                            <td class="py-2 px-2 font-semibold text-emerald-400 whitespace-nowrap">${l.client_ip || '-'}</td>
-                            <td class="py-2 px-2 text-slate-200 max-w-xs break-all select-all">${escapeHtml(l.endpoint)}</td>
-                            <td class="py-2 px-2 whitespace-nowrap"><span class="px-1 py-0.5 rounded text-[9px] ${l.status >= 400 ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}">${l.status}</span></td>
-                            <td class="py-2 px-2 text-right text-slate-400 whitespace-nowrap">${l.latency_ms}ms</td>
-                        </tr>
-                    `).join('');
-                } catch (err) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-red-400">Erreur logs.</td></tr>';
-                }
-            }
+            const res = await fetch(`/admin/api/keys/${keyId}/logs`);
+            const logs = await res.json();
+            tbody.innerHTML = logs.map(l => `
+                <tr class="hover:bg-slate-800/40">
+                    <td class="py-2 px-3 text-slate-400">${formatDate(l.ts)}</td>
+                    <td class="py-2 px-3 text-emerald-400 font-semibold">${l.client_ip || '-'}</td>
+                    <td class="py-2 px-3 text-slate-200 break-all select-all">${escapeHtml(l.endpoint)}</td>
+                    <td class="py-2 px-3"><span class="px-1 py-0.5 rounded text-[9px] ${l.status >= 400 ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}">${l.status}</span></td>
+                    <td class="py-2 px-3 text-right text-slate-400">${l.latency_ms}ms</td>
+                </tr>
+            `).join('');
         }
-
-        function closeDetailsModal() { currentOpenKeyId = null; document.getElementById('detailsModal').classList.add('hidden'); }
-        async function resetQuota(keyId) {
-            if (!confirm('Remettre à zéro le compteur de cette clé ?')) return;
+        function closeDetailsModal() { document.getElementById('detailsModal').classList.add('hidden'); }
+        async function resetKeyQuota(keyId) {
+            if (!confirm('Remettre à zéro le quota de cette clé ?')) return;
             const res = await fetch(`/admin/api/keys/${keyId}/reset-quota`, { method: 'POST' });
             if (res.ok) fetchKeys();
         }
-        async function changePlan(keyId, newPlan) {
+        async function changeKeyPlan(keyId, newPlan) {
             const res = await fetch(`/admin/api/keys/${keyId}/plan`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -411,22 +694,18 @@
             const label = document.getElementById('newLabel').value.trim();
             const owner_email = document.getElementById('newEmail').value.trim();
             const plan = document.getElementById('newPlan').value;
-            const btn = document.getElementById('createBtn');
-            btn.disabled = true;
-            try {
-                const res = await fetch('/admin/api/keys', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ label, owner_email, plan })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    closeCreateModal();
-                    document.getElementById('generatedRawKey').innerText = data.key;
-                    document.getElementById('showKeyModal').classList.remove('hidden');
-                    fetchKeys();
-                } else alert(data.detail || 'Erreur');
-            } finally { btn.disabled = false; }
+            const res = await fetch('/admin/api/keys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label, owner_email, plan })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                closeCreateModal();
+                document.getElementById('generatedRawKey').innerText = data.key;
+                document.getElementById('showKeyModal').classList.remove('hidden');
+                fetchKeys();
+            } else alert(data.detail || 'Erreur');
         });
 
         function copyGeneratedKey() {
@@ -441,7 +720,8 @@
         }
 
         function escapeHtml(str) { return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-        fetchKeys();
+
+        (async () => { await fetchKeys(); await fetchUsers(); })();
     </script>
 </body>
 </html>

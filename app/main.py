@@ -1,3 +1,4 @@
+from app.api.auth import router as auth_router
 from app.api.admin import router as admin_router
 import os
 from pathlib import Path
@@ -56,6 +57,8 @@ def create_app() -> FastAPI:
     # Routes v1 avec prefixe
     app.include_router(api_v1, prefix="/v1")
     app.include_router(admin_router)
+    app.include_router(auth_router)
+    app.include_router(auth_router, prefix="/api")
     # Routes legacy (/api/*) et WebSocket
     app.include_router(legacy)
     # Fichiers statiques UI
@@ -68,6 +71,11 @@ app = create_app()
 
 import hmac
 import hashlib
+
+
+@app.get("/reset-password", response_class=FileResponse)
+async def serve_reset_password():
+    return FileResponse(str(STATIC_DIR / "reset-password.html"))
 
 @app.get("/", response_class=FileResponse)
 async def serve_index(response: Response):

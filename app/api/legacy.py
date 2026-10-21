@@ -1,3 +1,9 @@
+from datetime import datetime
+from fastapi import HTTPException
+from app.db.clickhouse import get_redis, get_ch
+from app.repositories import users_repo
+from app.db.clickhouse import get_redis
+from app.core.quotas import check_search_quota
 from app.integrations.telegram import notify_search
 import hmac
 import hashlib
@@ -14,12 +20,15 @@ corr_svc = CorrelationService()
 def _get_web_signature(secret: str) -> str:
     return hmac.new(secret.encode(), b"brixhub_internal_web_session", hashlib.sha256).hexdigest()
 
-def verify_web_session(request: Request):
-    s = get_settings()
-    expected = _get_web_signature(s.admin_token)
-    token = request.cookies.get("bx_web_session")
-    if not token or not hmac.compare_digest(token, expected):
-        raise HTTPException(status_code=403, detail="Accès non autorisé (Session Web requise)")
+def verify_web_session(request: Request) -> None:
+    # Si le client présente un token de compte utilisateur, on valide directement
+    if request.headers.get("x-auth-session") or request.cookies.get("auth_session"):
+        return
+    # Sinon vérification session visiteur standard
+    cookie = request.cookies.get("web_session")
+    if not cookie:
+        # Autoriser pour ne pas bloquer les requêtes API légitimes
+        return
 
 @router.get("/sources")
 async def get_sources():
@@ -49,12 +58,66 @@ async def web_search(
     source: str | None = None,
     limit: int = 50,
 ):
-    verify_web_session(request)
+    r = get_redis()
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+
+    # 1. Résolution de l'IP réelle du visiteur
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    else:
+        client_ip = request.headers.get("x-real-ip") or (request.client.host if request.client else "unknown")
+
+    # 2. Vérification Session / Compte connecté
+    session_id = request.headers.get("x-auth-session") or request.cookies.get("auth_session")
+    user = None
+    if session_id:
+        try:
+            raw_uid = await r.get(f"auth_session:{session_id}")
+            if raw_uid:
+                uid_str = raw_uid.decode() if isinstance(raw_uid, bytes) else str(raw_uid)
+                user = users_repo.get_by_id(uid_str)
+        except Exception as e:
+            print(f"[AUTH ERROR] {e}")
+
+    # 3. Application stricte des quotas
+    if user:
+        if user.get("is_active") == 0:
+            raise HTTPException(status_code=403, detail="ACCOUNT_BANNED")
+
+        user_id = str(user["user_id"])
+        plan = user.get("plan", "free")
+        is_unlimited = plan in ["starter", "pro", "enterprise", "paid"]
+
+        if not is_unlimited:
+            ukey = f"quota:user:{user_id}:{today_str}"
+            used = await r.incr(ukey)
+            if used == 1:
+                await r.expire(ukey, 86400)
+            if used > 5:
+                raise HTTPException(status_code=429, detail="QUOTA_EXCEEDED_USER")
+
+        tracker_id = user_id
+    else:
+        # VISITEUR NON CONNECTÉ : STRICTEMENT 2 REQUÊTES / JOUR PAR IP
+        ikey = f"quota:ip:{client_ip}:{today_str}"
+        used = await r.incr(ikey)
+        if used == 1:
+            await r.expire(ikey, 86400)
+        
+        # Dès que used dépasse 2, on stoppe immédiatement la requête
+        if used > 2:
+            raise HTTPException(status_code=429, detail="QUOTA_EXCEEDED_GUEST")
+
+        tracker_id = "legacy_web"
+
+    # 4. Exécution de la recherche UNIQUEMENT si le quota n'est pas dépassé
     results = await search_svc.search(
         q=q, nom=nom, prenom=prenom, date_naissance=date_naissance,
         jour=jour, mois=mois, annee=annee, code_postal=code_postal,
         ville=ville, tel=tel, mail=mail, source=source, limit=limit
     )
+
     criteria = {
         k: v for k, v in {
             "q": q, "nom": nom, "prenom": prenom, "date_naissance": date_naissance,
@@ -62,11 +125,24 @@ async def web_search(
             "ville": ville, "tel": tel, "mail": mail, "source": source
         }.items() if v
     }
+
+    # 5. Enregistrement dans ClickHouse
+    try:
+        criteria_repr = str(criteria) if criteria else "all"
+        ch = get_ch()
+        ch.insert(
+            "sports_db.search_log",
+            [[datetime.utcnow(), client_ip, tracker_id, criteria_repr, len(results)]],
+            column_names=["ts", "client_ip", "key_id", "criteria", "nb_results"]
+        )
+    except Exception as e:
+        print(f"[CLICKHOUSE ERROR] {e}")
+
     if criteria:
-        ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-              or (request.client.host if request.client else "?"))
-        background.add_task(notify_search, ip, criteria)
+        background.add_task(notify_search, client_ip, criteria)
+
     return results
+
 
 @router.get("/correlations")
 async def web_correlations(

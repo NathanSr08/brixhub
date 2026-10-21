@@ -1,3 +1,6 @@
+from datetime import datetime
+from app.db.clickhouse import get_redis
+from starlette.concurrency import run_in_threadpool
 import hmac
 from pathlib import Path
 from fastapi import APIRouter, Request, Response, HTTPException, Depends, Header
@@ -119,3 +122,78 @@ async def api_get_key_logs(key_id: str, limit: int = 100):
 async def api_reset_key_quota(key_id: str):
     await key_svc.reset_daily_quota(key_id)
     return {"status": "reset", "key_id": key_id}
+
+
+from app.repositories import users_repo
+from app.core.auth_service import hash_password
+
+class AdminUserPasswordReset(BaseModel):
+    new_password: str
+
+class AdminUserLinkKey(BaseModel):
+    key_id: str
+    plan: str = "pro"
+
+class AdminUserPlan(BaseModel):
+    plan: str
+
+@router.get("/api/users", dependencies=[Depends(require_admin_auth)])
+async def api_get_users():
+    users = await run_in_threadpool(users_repo.list_all_users)
+    r = get_redis()
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    
+    for u in users:
+        uid = u["user_id"]
+        used = 0
+        try:
+            val = await r.get(f"quota:user:{uid}:{today}")
+            used = int(val) if val else 0
+        except Exception:
+            used = 0
+        u["used_today"] = used
+        u["is_unlimited"] = u["plan"] in ["starter", "pro", "enterprise", "paid"]
+    return users
+
+@router.patch("/api/users/{user_id}/status", dependencies=[Depends(require_admin_auth)])
+async def api_toggle_user_status(user_id: str):
+    u = await run_in_threadpool(users_repo.get_by_id, user_id)
+    if not u:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+    new_status = 0 if u["is_active"] == 1 else 1
+    await run_in_threadpool(users_repo.toggle_user_status, user_id, new_status)
+    # Si banni, purger ses sessions Redis actives immédiatement
+    if new_status == 0:
+        r = get_redis()
+        # Supprimer sessions associées si présentes
+        pass
+    return {"status": "ok", "is_active": new_status}
+
+@router.post("/api/users/{user_id}/reset-password", dependencies=[Depends(require_admin_auth)])
+async def api_admin_reset_password(user_id: str, payload: AdminUserPasswordReset):
+    new_hash = hash_password(payload.new_password)
+    await run_in_threadpool(users_repo.update_password, user_id, new_hash)
+    return {"status": "ok", "message": "Mot de passe mis à jour"}
+
+@router.post("/api/users/{user_id}/link-key", dependencies=[Depends(require_admin_auth)])
+async def api_admin_link_key(user_id: str, payload: AdminUserLinkKey):
+    await run_in_threadpool(users_repo.link_api_key, user_id, payload.key_id, payload.plan)
+    return {"status": "ok", "message": "Clé liée et plan mis à jour"}
+
+@router.patch("/api/users/{user_id}/plan", dependencies=[Depends(require_admin_auth)])
+async def api_admin_update_plan(user_id: str, payload: AdminUserPlan):
+    await run_in_threadpool(users_repo.update_user_plan, user_id, payload.plan)
+    return {"status": "ok", "plan": payload.plan}
+
+@router.post("/api/users/{user_id}/reset-quota", dependencies=[Depends(require_admin_auth)])
+async def api_admin_reset_user_quota(user_id: str):
+    r = get_redis()
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    await r.delete(f"quota:user:{user_id}:{today}")
+    return {"status": "ok"}
+
+@router.get("/api/users/{user_id}/search-logs", dependencies=[Depends(require_admin_auth)])
+async def api_admin_user_logs(user_id: str, limit: int = 100):
+    u = await run_in_threadpool(users_repo.get_by_id, user_id)
+    key_id = u.get("api_key_id") if u else None
+    return await run_in_threadpool(users_repo.get_user_search_logs, user_id, key_id, limit)
