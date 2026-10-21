@@ -9,7 +9,33 @@
     <meta name="robots" content="index, follow">
 
     <link rel="icon" type="image/x-icon" href="/static/og-banner.png">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+        // ==========================================
+        // FLUX OTP SÉCURISÉ : INSCRIPTION & FORGOT
+        // ==========================================
+        let otpSignupPendingEmail = '';
+        let otpForgotPendingEmail = '';
+
+        function toggleSignupStep(step) {
+            hideAuthAlert();
+            const s1 = document.getElementById('signupStep1');
+            const s2 = document.getElementById('signupStep2');
+            if (step === 1) {
+                if (s1) s1.classList.remove('hidden');
+                if (s2) s2.classList.add('hidden');
+            } else {
+                if (s1) s1.classList.add('hidden');
+                if (s2) s2.classList.remove('hidden');
+            }
+        }
+
+        
+
+        
+
+        
+
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
@@ -448,19 +474,41 @@
             <!-- Formulaire Inscription -->
             <form id="formSignup" class="hidden space-y-3 text-xs">
                 <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5 text-[11px] text-blue-300">
-                    <i class="fa-solid fa-shield-halved mr-1"></i> Seuls les fournisseurs officiels sont acceptés : <strong class="text-white">@gmail, @hotmail, @yahoo, @outlook, @icloud</strong>.
+                    <i class="fa-solid fa-shield-halved mr-1"></i> Domaines officiels : <strong class="text-white">@gmail, @hotmail, @yahoo, @outlook, @icloud</strong>.
                 </div>
-                <div>
-                    <label class="block text-slate-400 mb-1 font-medium">Adresse Email Officielle</label>
-                    <input type="email" id="signupEmail" required placeholder="nom@gmail.com" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-200 outline-none">
+
+                <!-- Phase 1 : Saisie Email & Mot de passe -->
+                <div id="signupStep1" class="space-y-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Adresse Email Officielle</label>
+                        <input type="email" id="signupEmail" required placeholder="nom@gmail.com" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Mot de passe (min. 6 caractères)</label>
+                        <input type="password" id="signupPassword" minlength="6" required placeholder="••••••••" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 outline-none">
+                    </div>
+                    <button type="button" onclick="handleSendSignupOtp()" id="btnSendSignupOtp" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition shadow-lg shadow-indigo-600/20">
+                        Recevoir le code de vérification
+                    </button>
                 </div>
-                <div>
-                    <label class="block text-slate-400 mb-1 font-medium">Mot de passe (min. 6 caractères)</label>
-                    <input type="password" id="signupPassword" minlength="6" required placeholder="••••••••" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-200 outline-none">
+
+                <!-- Phase 2 : Validation stricte du Code OTP -->
+                <div id="signupStep2" class="space-y-3 hidden">
+                    <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 text-[11px] text-emerald-300">
+                        <i class="fa-solid fa-envelope mr-1"></i> Un code à 6 chiffres vous a été envoyé par email.
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Code OTP (6 chiffres)</label>
+                        <input type="text" id="signupOtpCode" maxlength="6" required placeholder="000000" class="w-full input-bg rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-widest text-white border border-indigo-500/60 focus:border-indigo-400 outline-none">
+                    </div>
+                    <button type="submit" id="btnConfirmSignup" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition shadow-lg shadow-emerald-600/20">
+                        Confirmer et créer mon compte
+                    </button>
+                    <button type="button" onclick="toggleSignupStep(1)" class="w-full text-center text-slate-400 hover:text-white text-[11px] pt-1">
+                        &larr; Modifier l'adresse email
+                    </button>
                 </div>
-                <button type="submit" id="btnSubmitSignup" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition shadow-lg shadow-emerald-600/20 mt-1">
-                    Créer mon compte gratuit
-                </button>
+
                 <div class="text-center text-slate-400 pt-1 text-[11px]">
                     Déjà inscrit ? <button type="button" onclick="switchAuthView('signin')" class="text-indigo-400 hover:underline font-semibold">Se connecter</button>
                 </div>
@@ -468,16 +516,41 @@
 
             <!-- Formulaire Mot de Passe Oublié -->
             <form id="formForgot" class="hidden space-y-3.5 text-xs">
-                <p class="text-slate-400 text-[11px] leading-relaxed">
-                    Saisissez votre adresse email pour recevoir un lien de réinitialisation sécurisé.
-                </p>
-                <div>
-                    <label class="block text-slate-400 mb-1 font-medium">Adresse Email</label>
-                    <input type="email" id="forgotEmail" required placeholder="votre.email@gmail.com" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-200 outline-none">
+                <!-- Étape 1 : Demande de code -->
+                <div id="forgotStep1" class="space-y-3">
+                    <p class="text-slate-400 text-[11px] leading-relaxed">
+                        Saisissez votre email pour recevoir un code à 6 chiffres par email.
+                    </p>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Adresse Email</label>
+                        <input type="email" id="forgotEmail" required placeholder="votre.email@gmail.com" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 outline-none">
+                    </div>
+                    <button type="button" onclick="handleSendForgotOtp()" id="btnSendForgotOtp" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition shadow-lg shadow-indigo-600/20">
+                        Recevoir mon code par email
+                    </button>
                 </div>
-                <button type="submit" id="btnSubmitForgot" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition">
-                    Envoyer le lien de récupération
-                </button>
+
+                <!-- Étape 2 : Code reçu par email + Nouveau mot de passe -->
+                <div id="forgotStep2" class="space-y-3 hidden">
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5 text-[11px] text-blue-300">
+                        <i class="fa-solid fa-envelope mr-1"></i> Consultez votre boîte mail pour récupérer le code à 6 chiffres.
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Code reçu par email</label>
+                        <input type="text" id="forgotOtpCode" maxlength="6" required placeholder="000000" class="w-full input-bg rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-widest text-white border border-indigo-500/60 focus:border-indigo-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Nouveau mot de passe (min. 6 car.)</label>
+                        <input type="password" id="forgotNewPassword" minlength="6" required placeholder="••••••••" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 outline-none">
+                    </div>
+                    <button type="button" onclick="handleConfirmForgotOtp()" id="btnConfirmForgot" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition shadow-lg shadow-emerald-600/20">
+                        Valider et changer le mot de passe
+                    </button>
+                    <button type="button" onclick="document.getElementById('forgotStep1').classList.remove('hidden'); document.getElementById('forgotStep2').classList.add('hidden');" class="w-full text-center text-slate-400 hover:text-white text-[11px] pt-1">
+                        &larr; Changer d'email
+                    </button>
+                </div>
+
                 <div class="text-center text-slate-400 pt-1 text-[11px]">
                     <button type="button" onclick="switchAuthView('signin')" class="text-indigo-400 hover:underline font-medium">&larr; Retour à la connexion</button>
                 </div>
@@ -557,7 +630,139 @@
         </div>
     </footer>
 
+    
     <script>
+        // --- ATTACHEMENT GLOBAL WINDOW DES FONCTIONS OTP ---
+        window.otpSignupPendingEmail = '';
+        window.otpForgotPendingEmail = '';
+
+        window.toggleSignupStep = function(step) {
+            if (typeof hideAuthAlert === 'function') hideAuthAlert();
+            const s1 = document.getElementById('signupStep1');
+            const s2 = document.getElementById('signupStep2');
+            if (step === 1) {
+                if (s1) s1.classList.remove('hidden');
+                if (s2) s2.classList.add('hidden');
+            } else {
+                if (s1) s1.classList.add('hidden');
+                if (s2) s2.classList.remove('hidden');
+            }
+        };
+
+        window.handleSendSignupOtp = async function() {
+            if (typeof hideAuthAlert === 'function') hideAuthAlert();
+            const emailEl = document.getElementById('signupEmail');
+            const pwdEl = document.getElementById('signupPassword');
+            const btn = document.getElementById('btnSendSignupOtp');
+
+            const email = emailEl ? emailEl.value.trim() : '';
+            const password = pwdEl ? pwdEl.value : '';
+
+            if (!email || password.length < 6) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Veuillez saisir un email valide et un mot de passe d'au moins 6 caractères.");
+                return;
+            }
+
+            if (btn) { btn.disabled = true; btn.innerText = "Envoi du code..."; }
+
+            try {
+                const res = await fetch('/auth/signup/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    window.otpSignupPendingEmail = email;
+                    window.toggleSignupStep(2);
+                    if (typeof showAuthAlert === 'function') showAuthAlert("Code à 6 chiffres envoyé par email !", false);
+                } else {
+                    if (typeof showAuthAlert === 'function') showAuthAlert(data.detail || "Erreur envoi OTP.");
+                }
+            } catch (err) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Erreur réseau.");
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = "Recevoir le code de vérification"; }
+            }
+        };
+
+        window.handleSendForgotOtp = async function() {
+            if (typeof hideAuthAlert === 'function') hideAuthAlert();
+            const emailEl = document.getElementById('forgotEmail');
+            const btn = document.getElementById('btnSendForgotOtp');
+            const email = emailEl ? emailEl.value.trim() : '';
+
+            if (!email) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Veuillez renseigner votre adresse email.");
+                return;
+            }
+
+            if (btn) { btn.disabled = true; btn.innerText = "Envoi en cours..."; }
+
+            try {
+                const res = await fetch('/auth/forgot-password/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                window.otpForgotPendingEmail = email;
+
+                const step1 = document.getElementById('forgotStep1');
+                const step2 = document.getElementById('forgotStep2');
+                if (step1) step1.classList.add('hidden');
+                if (step2) step2.classList.remove('hidden');
+
+                if (typeof showAuthAlert === 'function') showAuthAlert(data.message || "Code expédié par email !", false);
+            } catch (err) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Erreur réseau.");
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = "Recevoir mon code par email"; }
+            }
+        };
+
+        window.handleConfirmForgotOtp = async function() {
+            if (typeof hideAuthAlert === 'function') hideAuthAlert();
+            const otpEl = document.getElementById('forgotOtpCode');
+            const pwdEl = document.getElementById('forgotNewPassword');
+            const btn = document.getElementById('btnConfirmForgot');
+
+            const otp = otpEl ? otpEl.value.trim() : '';
+            const new_password = pwdEl ? pwdEl.value : '';
+
+            if (otp.length !== 6 || new_password.length < 6) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Code à 6 chiffres et mot de passe de min. 6 caractères requis.");
+                return;
+            }
+
+            if (btn) { btn.disabled = true; btn.innerText = "Mise à jour..."; }
+
+            try {
+                const res = await fetch('/auth/forgot-password/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: window.otpForgotPendingEmail, otp, new_password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    if (typeof showAuthAlert === 'function') showAuthAlert("Mot de passe mis à jour ! Redirection...", false);
+                    setTimeout(() => {
+                        const s1 = document.getElementById('forgotStep1');
+                        const s2 = document.getElementById('forgotStep2');
+                        if (s1) s1.classList.remove('hidden');
+                        if (s2) s2.classList.add('hidden');
+                        if (typeof switchAuthView === 'function') switchAuthView('signin');
+                    }, 1500);
+                } else {
+                    if (typeof showAuthAlert === 'function') showAuthAlert(data.detail || "Code OTP incorrect.");
+                }
+            } catch (err) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Erreur réseau.");
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = "Valider et changer le mot de passe"; }
+            }
+        };
+    
         let currentResults = [];
         let currentUser = null;
 
@@ -692,75 +897,58 @@
         });
 
         // 2. Soumission Inscription
-        document.getElementById('formSignup').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('signupEmail').value.trim();
-            const password = document.getElementById('signupPassword').value;
-            const btn = document.getElementById('btnSubmitSignup');
+                const formSignupEl = document.getElementById('formSignup');
+        if (formSignupEl) {
+            formSignupEl.onsubmit = async (e) => {
+                e.preventDefault();
+                if (typeof hideAuthAlert === 'function') hideAuthAlert();
+                
+                const otpEl = document.getElementById('signupOtpCode');
+                const btn = document.getElementById('btnConfirmSignup') || document.getElementById('btnSubmitSignup');
 
-            btn.disabled = true;
-            btn.innerText = 'Création en cours...';
-            try {
-                const res = await fetch('/auth/signup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showAuthAlert('Compte créé ! Connexion automatique...', false);
-                    setTimeout(async () => {
-                        // Connexion automatique après inscription
-                        await fetch('/auth/signin', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email, password })
-                        });
-                        closeAuthModal();
-                        await checkAuthSession();
-                    }, 1200);
-                } else {
-                    showAuthAlert(data.detail || 'Erreur lors de l\'inscription');
+                const otp = otpEl ? otpEl.value.trim() : '';
+
+                if (otp.length !== 6) {
+                    if (typeof showAuthAlert === 'function') showAuthAlert("Le code OTP doit comporter exactement 6 chiffres.");
+                    return;
                 }
-            } catch (err) {
-                showAuthAlert('Erreur réseau');
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Créer mon compte gratuit';
-            }
-        });
+
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerText = "Validation du compte...";
+                }
+
+                const emailToSend = window.otpSignupPendingEmail || (document.getElementById('signupEmail') ? document.getElementById('signupEmail').value.trim() : '');
+
+                try {
+                    const res = await fetch('/auth/signup/verify-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: emailToSend, otp: otp })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        if (typeof showAuthAlert === 'function') showAuthAlert("Compte validé avec succès ! Connexion en cours...", false);
+                        setTimeout(() => {
+                            if (typeof toggleSignupStep === 'function') toggleSignupStep(1);
+                            if (typeof switchAuthView === 'function') switchAuthView('signin');
+                        }, 1400);
+                    } else {
+                        if (typeof showAuthAlert === 'function') showAuthAlert(data.detail || "Code OTP incorrect ou expiré.");
+                    }
+                } catch (err) {
+                    if (typeof showAuthAlert === 'function') showAuthAlert("Erreur réseau lors de la validation.");
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "Confirmer et créer mon compte";
+                    }
+                }
+            };
+        }
 
         // 3. Soumission Mot de passe oublié
-        document.getElementById('formForgot').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('forgotEmail').value.trim();
-            const btn = document.getElementById('btnSubmitForgot');
-
-            btn.disabled = true;
-            btn.innerText = 'Génération...';
-            try {
-                const res = await fetch('/auth/forgot-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    if (data.reset_link) {
-                        showAuthAlert(`Lien généré : <a href="${data.reset_link}" class="underline font-bold">Cliquez ici pour changer votre mot de passe</a>`, false);
-                    } else {
-                        showAuthAlert(data.message, false);
-                    }
-                } else {
-                    showAuthAlert(data.detail || 'Erreur');
-                }
-            } catch (err) {
-                showAuthAlert('Erreur réseau');
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Envoyer le lien de récupération';
-            }
-        });
+        
 
         // 4. Lier une Clé API
         document.getElementById('formLinkApiKey').addEventListener('submit', async (e) => {
