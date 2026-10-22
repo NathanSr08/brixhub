@@ -1,0 +1,255 @@
+from datetime import datetime
+
+from app.db.clickhouse import get_ch
+from app.repositories.ch_admin import esc_lit
+
+TABLE = "auth_db.api_logs"
+ADMIN_COND = " AND tag != 'admin' AND actor_type != 'admin'"
+
+COLS = ("toString(id) AS log_id, toString(timestamp) AS ts, actor_type, actor_id, "
+        "actor_label, session_ref, ip, user_agent, method, path, "
+        "query_params AS query, route, status_code AS status, latency_ms, "
+        "request_id, error, tag, meta")
+
+_KEYS = ["log_id", "ts", "actor_type", "actor_id", "actor_label", "session_ref", "ip",
+         "user_agent", "method", "path", "query", "route", "status", "latency_ms",
+         "request_id", "error", "tag", "meta"]
+
+
+def _row(r) -> dict:
+    d = dict(zip(_KEYS, r))
+    d["ts"] = str(d["ts"])
+    d["status"] = int(d["status"])
+    d["latency_ms"] = int(d["latency_ms"])
+    d["actor_id"] = str(d["actor_id"])
+    d["actor_label"] = str(d["actor_label"])
+    return d
+
+
+def _where(f: dict) -> tuple[str, dict]:
+    c, p = [], {}
+    if f.get("q"):
+        c.append("""(positionCaseInsensitive(ip, %(q)s) > 0
+                  OR positionCaseInsensitive(actor_id, %(q)s) > 0
+                  OR positionCaseInsensitive(actor_label, %(q)s) > 0
+                  OR positionCaseInsensitive(path, %(q)s) > 0
+                  OR positionCaseInsensitive(query_params, %(q)s) > 0
+                  OR positionCaseInsensitive(user_agent, %(q)s) > 0
+                  OR positionCaseInsensitive(request_id, %(q)s) > 0
+                  OR positionCaseInsensitive(error, %(q)s) > 0)""")
+        p["q"] = f["q"].strip()
+    if f.get("actor_type") and f["actor_type"] != "all":
+        c.append("actor_type = %(at)s"); p["at"] = f["actor_type"]
+    if f.get("actor_id"):
+        c.append("actor_id = %(aid)s"); p["aid"] = f["actor_id"]
+    if f.get("ip"):
+        c.append("ip = %(ip)s"); p["ip"] = f["ip"]
+    if f.get("method"):
+        c.append("method = %(m)s"); p["m"] = f["method"].upper()
+    if f.get("path"):
+        c.append("positionCaseInsensitive(path, %(pp)s) > 0"); p["pp"] = f["path"]
+    if f.get("tag") and f["tag"] != "all":
+        c.append("tag = %(tag)s"); p["tag"] = f["tag"]
+    if f.get("status_class"):
+        c.append("intDiv(status_code, 100) = %(sc)s"); p["sc"] = int(f["status_class"])
+    if f.get("errors_only"):
+        c.append("status_code >= 400")
+    if f.get("min_latency"):
+        c.append("latency_ms >= %(ml)s"); p["ml"] = int(f["min_latency"])
+    if f.get("from_ts"):
+        c.append("timestamp >= %(fts)s"); p["fts"] = f["from_ts"]
+    if f.get("to_ts"):
+        c.append("timestamp <= %(tts)s"); p["tts"] = f["to_ts"]
+    if f.get("exclude_panel", True):
+        c.append("tag != 'panel'")
+    if f.get("exclude_admin", True):
+        c.append("tag != 'admin'")
+        c.append("actor_type != 'admin'")
+    return (" AND ".join(c) if c else "1"), p
+
+
+def where_literal(f: dict) -> str:
+    """Meme filtre que _where mais en SQL litteral (pour ALTER ... DELETE)."""
+    c = []
+    if f.get("q"):
+        q = esc_lit(f["q"].strip())
+        c.append("(positionCaseInsensitive(ip, {0}) > 0 OR positionCaseInsensitive(actor_id, {0}) > 0 "
+                 "OR positionCaseInsensitive(actor_label, {0}) > 0 OR positionCaseInsensitive(path, {0}) > 0 "
+                 "OR positionCaseInsensitive(query_params, {0}) > 0 OR positionCaseInsensitive(user_agent, {0}) > 0 "
+                 "OR positionCaseInsensitive(request_id, {0}) > 0 OR positionCaseInsensitive(error, {0}) > 0)".format(q))
+    if f.get("actor_type") and f["actor_type"] != "all":
+        c.append("actor_type = " + esc_lit(f["actor_type"]))
+    if f.get("actor_id"):
+        c.append("actor_id = " + esc_lit(f["actor_id"]))
+    if f.get("ip"):
+        c.append("ip = " + esc_lit(f["ip"]))
+    if f.get("method"):
+        c.append("method = " + esc_lit(str(f["method"]).upper()))
+    if f.get("path"):
+        c.append("positionCaseInsensitive(path, " + esc_lit(f["path"]) + ") > 0")
+    if f.get("tag") and f["tag"] != "all":
+        c.append("tag = " + esc_lit(f["tag"]))
+    if f.get("status_class"):
+        c.append("intDiv(status_code, 100) = " + str(int(f["status_class"])))
+    if f.get("errors_only"):
+        c.append("status_code >= 400")
+    if f.get("min_latency"):
+        c.append("latency_ms >= " + str(int(f["min_latency"])))
+    if f.get("from_ts"):
+        c.append("timestamp >= " + esc_lit(str(f["from_ts"]).replace("T", " ")))
+    if f.get("to_ts"):
+        c.append("timestamp <= " + esc_lit(str(f["to_ts"]).replace("T", " ")))
+    if f.get("exclude_panel", True):
+        c.append("tag != 'panel'")
+    return " AND ".join(c) if c else "1"
+
+
+def list_logs(f: dict, limit: int = 100, offset: int = 0) -> list[dict]:
+    where, p = _where(f)
+    p["lim"], p["off"] = limit, offset
+    res = get_ch().query(
+        f"SELECT {COLS} FROM {TABLE} WHERE {where} "
+        f"ORDER BY timestamp DESC LIMIT %(lim)s OFFSET %(off)s", parameters=p)
+    return [_row(r) for r in res.result_rows]
+
+
+def count_logs(f: dict) -> int:
+    where, p = _where(f)
+    res = get_ch().query(f"SELECT count() FROM {TABLE} WHERE {where}", parameters=p)
+    return int(res.result_rows[0][0]) if res.result_rows else 0
+
+
+def get_log(log_id: str) -> dict | None:
+    res = get_ch().query(f"SELECT {COLS} FROM {TABLE} WHERE toString(id) = %(i)s LIMIT 1",
+                         parameters={"i": log_id})
+    return _row(res.result_rows[0]) if res.result_rows else None
+
+
+def logs_since(epoch: float, limit: int = 200, exclude_admin: bool = True) -> list[dict]:
+    extra = ADMIN_COND if exclude_admin else ""
+    res = get_ch().query(
+        f"SELECT {COLS} FROM {TABLE} WHERE toUnixTimestamp64Milli(timestamp) > %(e)s "
+        f"AND tag != 'panel'{extra} ORDER BY timestamp ASC LIMIT %(l)s",
+        parameters={"e": int(epoch * 1000), "l": limit})
+    return [_row(r) for r in res.result_rows]
+
+
+def stats(hours: int = 24, exclude_admin: bool = True) -> dict:
+    extra = ADMIN_COND if exclude_admin else ""
+    res = get_ch().query(f"""
+        SELECT count(), countIf(actor_type='guest'), countIf(actor_type='user'),
+               countIf(actor_type='api'), countIf(actor_type='admin'),
+               countIf(actor_type='bot'), countIf(status_code>=400 AND status_code<500),
+               countIf(status_code>=500), countIf(status_code=429),
+               round(avg(latency_ms)), quantile(0.95)(latency_ms), uniqExact(ip)
+        FROM {TABLE}
+        WHERE timestamp >= now() - INTERVAL %(h)s HOUR AND tag != 'panel'{extra}
+    """, parameters={"h": hours})
+    r = res.result_rows[0]
+    names = ["total", "guests", "users", "api", "admins", "bots",
+             "err4xx", "err5xx", "err429", "avg_ms", "p95_ms", "uniq_ips"]
+    out = {k: (float(v) if k.endswith("_ms") else int(v)) for k, v in zip(names, r)}
+
+    def _top(col: str, alias: str, limit: int = 8) -> list[dict]:
+        q = get_ch().query(f"""
+            SELECT {col} AS k, count() AS n FROM {TABLE}
+            WHERE timestamp >= now() - INTERVAL %(h)s HOUR AND tag != 'panel'{extra} AND {col} != ''
+            GROUP BY k ORDER BY n DESC LIMIT %(l)s
+        """, parameters={"h": hours, "l": limit})
+        return [{alias: str(x[0]), "count": int(x[1])} for x in q.result_rows]
+
+    out["top_paths"] = _top("path", "path")
+    out["top_ips"] = _top("ip", "ip")
+    out["top_actors"] = _top("actor_label", "actor_label")
+
+    tl = get_ch().query(f"""
+        SELECT toStartOfMinute(timestamp) AS m, count(), countIf(status_code>=400) AS e
+        FROM {TABLE}
+        WHERE timestamp >= now() - INTERVAL 60 MINUTE AND tag != 'panel'{extra}
+        GROUP BY m ORDER BY m
+    """)
+    out["timeline"] = [{"t": str(x[0]), "n": int(x[1]), "errors": int(x[2])}
+                       for x in tl.result_rows]
+    return out
+
+
+def actor_profile(actor_type: str, actor_id: str, hours: int = 720) -> dict:
+    p = {"at": actor_type, "aid": actor_id, "h": hours}
+    agg = get_ch().query(f"""
+        SELECT count(), min(timestamp), max(timestamp), uniqExact(ip), uniqExact(user_agent),
+               round(avg(latency_ms)), max(latency_ms),
+               countIf(status_code>=400), countIf(status_code=429), countIf(status_code>=500)
+        FROM {TABLE}
+        WHERE actor_type = %(at)s AND actor_id = %(aid)s AND timestamp >= now() - INTERVAL %(h)s HOUR
+    """, parameters=p)
+    r = agg.result_rows[0]
+    prof = {
+        "hits": int(r[0]), "first_seen": str(r[1]), "last_seen": str(r[2]),
+        "unique_ips": int(r[3]), "unique_agents": int(r[4]),
+        "avg_latency": float(r[5]), "max_latency": int(r[6]),
+        "err4xx": int(r[7]), "err429": int(r[8]), "err5xx": int(r[9]),
+    }
+
+    ips = get_ch().query(f"""
+        SELECT ip, count() AS n, max(timestamp) AS last FROM {TABLE}
+        WHERE actor_type = %(at)s AND actor_id = %(aid)s
+        GROUP BY ip ORDER BY n DESC LIMIT 20
+    """, parameters=p)
+    prof["ips"] = [{"ip": str(x[0]), "count": int(x[1]), "last_seen": str(x[2])}
+                   for x in ips.result_rows]
+
+    uas = get_ch().query(f"""
+        SELECT user_agent, count() AS n FROM {TABLE}
+        WHERE actor_type = %(at)s AND actor_id = %(aid)s AND user_agent != ''
+        GROUP BY user_agent ORDER BY n DESC LIMIT 10
+    """, parameters=p)
+    prof["agents"] = [{"user_agent": str(x[0]), "count": int(x[1])} for x in uas.result_rows]
+
+    paths = get_ch().query(f"""
+        SELECT path, count() AS n FROM {TABLE}
+        WHERE actor_type = %(at)s AND actor_id = %(aid)s
+        GROUP BY path ORDER BY n DESC LIMIT 15
+    """, parameters=p)
+    prof["top_paths"] = [{"path": str(x[0]), "count": int(x[1])} for x in paths.result_rows]
+
+    days = get_ch().query(f"""
+        SELECT toDate(timestamp) AS d, count() FROM {TABLE}
+        WHERE actor_type = %(at)s AND actor_id = %(aid)s
+        GROUP BY d ORDER BY d DESC LIMIT 30
+    """, parameters=p)
+    prof["daily"] = [{"day": str(x[0]), "count": int(x[1])} for x in days.result_rows]
+
+    crit = get_ch().query(f"""
+        SELECT query_params FROM {TABLE}
+        WHERE actor_type = %(at)s AND actor_id = %(aid)s
+          AND tag IN ('search', 'api') AND query_params != ''
+        ORDER BY timestamp DESC LIMIT 30
+    """, parameters=p)
+    prof["recent_searches"] = [str(x[0]) for x in crit.result_rows]
+
+    return prof
+
+
+def actor_logs(actor_type: str, actor_id: str, limit: int = 100) -> list[dict]:
+    res = get_ch().query(
+        f"SELECT {COLS} FROM {TABLE} WHERE actor_type = %(at)s AND actor_id = %(aid)s "
+        f"ORDER BY timestamp DESC LIMIT %(l)s",
+        parameters={"at": actor_type, "aid": actor_id, "l": limit})
+    return [_row(r) for r in res.result_rows]
+
+
+def distinct_tags() -> list[str]:
+    res = get_ch().query(f"SELECT DISTINCT tag FROM {TABLE} ORDER BY tag")
+    return [str(x[0]) for x in res.result_rows]
+
+
+def log_admin_action(admin_ref: str, action: str, target_type: str,
+                     target_id: str, ip: str, details: str = "") -> None:
+    try:
+        get_ch().insert("auth_db.admin_actions",
+                        [[datetime.utcnow(), admin_ref, action, target_type,
+                          target_id, ip, details[:1000]]],
+                        column_names=["ts", "admin_ref", "action", "target_type",
+                                      "target_id", "ip", "details"])
+    except Exception as e:
+        print(f"[AUDIT] admin_action KO: {e}", flush=True)

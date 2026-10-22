@@ -12,6 +12,13 @@ from app.core.config import get_settings
 from app.services.search_service import SearchService
 from app.services.correlation_service import CorrelationService
 from app.repositories import membres_repo
+from app.repositories import clicks_repo
+from app.core import pricing
+from app.core.rate_limit import enforce_rps
+from app.core import audit
+from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
+import uuid
 
 router = APIRouter(prefix="/api", tags=["legacy-web"])
 search_svc = SearchService()
@@ -25,7 +32,7 @@ def verify_web_session(request: Request) -> None:
     if request.headers.get("x-auth-session") or request.cookies.get("auth_session"):
         return
     # Sinon vérification session visiteur standard
-    cookie = request.cookies.get("web_session")
+    cookie = request.cookies.get("web_session") or request.cookies.get("bx_web_session")
     if not cookie:
         # Autoriser pour ne pas bloquer les requêtes API légitimes
         return
@@ -87,26 +94,30 @@ async def web_search(
 
         user_id = str(user["user_id"])
         plan = user.get("plan", "free")
-        is_unlimited = plan in ["starter", "pro", "enterprise", "paid"]
+        is_unlimited = pricing.resolve_web_access(user)[0]
+        await enforce_rps(r, "web", user_id, pricing.setting_int("global_rps_user", 5))
 
         if not is_unlimited:
             ukey = f"quota:user:{user_id}:{today_str}"
             used = await r.incr(ukey)
             if used == 1:
                 await r.expire(ukey, 86400)
-            if used > 5:
+            if used > pricing.resolve_web_access(user)[1]:
+                request.state.audit_error = "QUOTA_EXCEEDED_USER"
                 raise HTTPException(status_code=429, detail="QUOTA_EXCEEDED_USER")
 
         tracker_id = user_id
     else:
         # VISITEUR NON CONNECTÉ : STRICTEMENT 2 REQUÊTES / JOUR PAR IP
+        await enforce_rps(r, "web", client_ip, pricing.setting_int("global_rps_guest", 3))
         ikey = f"quota:ip:{client_ip}:{today_str}"
         used = await r.incr(ikey)
         if used == 1:
             await r.expire(ikey, 86400)
         
         # Dès que used dépasse 2, on stoppe immédiatement la requête
-        if used > 2:
+        if used > pricing.guest_daily_quota():
+            request.state.audit_error = "QUOTA_EXCEEDED_GUEST"
             raise HTTPException(status_code=429, detail="QUOTA_EXCEEDED_GUEST")
 
         tracker_id = "legacy_web"
@@ -126,6 +137,8 @@ async def web_search(
         }.items() if v
     }
 
+    request.state.audit_meta = {"nb_results": len(results), "criteria": criteria}
+
     # 5. Enregistrement dans ClickHouse
     try:
         criteria_repr = str(criteria) if criteria else "all"
@@ -142,6 +155,58 @@ async def web_search(
         background.add_task(notify_search, client_ip, criteria)
 
     return results
+
+
+class ClickPayload(BaseModel):
+    profile_ref: str
+    nom: str = ""
+    prenom: str = ""
+    date_naissance: str = ""
+    ville: str = ""
+    code_postal: str = ""
+    mail: str = ""
+    tel: str = ""
+    source: str = ""
+    criteria: str = ""
+    rank: int = 0
+    result_count: int = 0
+
+
+@router.post("/track/click")
+async def track_click(request: Request, payload: ClickPayload):
+    """Enregistre le clic d'un visiteur sur une fiche resultat."""
+    actor = await audit.resolve_actor(request)
+    ip = audit.client_ip(request)
+    click_id = uuid.uuid4().hex
+
+    request.state.audit_tag = "click"
+    request.state.audit_meta = {
+        "profile_ref": payload.profile_ref,
+        "profil": f"{payload.nom} {payload.prenom}".strip(),
+        "date_naissance": payload.date_naissance,
+        "ville": payload.ville,
+        "code_postal": payload.code_postal,
+        "mail": payload.mail,
+        "tel": payload.tel,
+        "source": payload.source,
+        "criteria": payload.criteria,
+        "rank": payload.rank,
+        "result_count": payload.result_count,
+    }
+
+    row = [
+        click_id, actor["type"], str(actor.get("id", "")), str(actor.get("label", "")),
+        str(actor.get("session_ref", "")), ip, payload.profile_ref,
+        payload.nom, payload.prenom, payload.date_naissance, payload.ville,
+        payload.code_postal, payload.mail, payload.tel, payload.source,
+        payload.criteria, int(payload.rank), int(payload.result_count),
+    ]
+    try:
+        await run_in_threadpool(clicks_repo.insert_click, row)
+    except Exception as e:
+        print(f"[CLICK] insert KO: {e}", flush=True)
+
+    return {"status": "ok", "click_id": click_id}
 
 
 @router.get("/correlations")

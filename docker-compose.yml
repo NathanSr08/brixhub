@@ -35,6 +35,7 @@ services:
       - proxy
 
   webapp:
+    build: .
     image: brixhub_app:latest
     container_name: web_search_app
     restart: unless-stopped

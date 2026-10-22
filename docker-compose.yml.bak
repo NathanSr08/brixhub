@@ -1,0 +1,66 @@
+services:
+  traefik:
+    image: traefik:v3.6
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=proxy"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.email=nathan@1xp.fr"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt/acme.json:/letsencrypt/acme.json
+    networks:
+      - proxy
+
+  redis:
+    image: redis:7-alpine
+    container_name: app_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - proxy
+
+  webapp:
+    image: brixhub_app:latest
+    container_name: web_search_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.brix.rule=Host(`brixhub.uned.live`)"
+      - "traefik.http.routers.brix.entrypoints=websecure"
+      - "traefik.http.routers.brix.tls=true"
+      - "traefik.http.routers.brix.tls.certresolver=letsencrypt"
+      - "traefik.http.services.brix.loadbalancer.server.port=80"
+    networks:
+      - proxy
+    depends_on:
+      - redis
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+volumes:
+  redis_data:

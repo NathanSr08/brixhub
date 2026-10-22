@@ -1,0 +1,413 @@
+/* =====================================================================
+   BrixHub - Onglet "Tarifs & Quotas" (plans API, suppressions, reglages)
+   ===================================================================== */
+(function () {
+    'use strict';
+
+    function esc(v) {
+        return String(v === null || v === undefined ? '' : v)
+            .replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+    }
+    function inp(id, v, type, w) {
+        return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v) + '" ' +
+            'class="' + (w || 'w-24') + ' bg-dark border border-slate-800 rounded px-2 py-1 text-[11px] text-white">';
+    }
+    function chk(id, v) {
+        return '<input id="' + id + '" type="checkbox" class="accent-emerald-500" ' + (v ? 'checked' : '') + '>';
+    }
+
+    var SECTION = `
+<div id="tabContentPricing" class="hidden space-y-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-surface border border-slate-800 rounded-xl p-4"><div class="text-slate-400 text-[10px]">Quota invite / jour</div><div id="pvGuestQuota" class="text-2xl font-extrabold text-white">-</div></div>
+    <div class="bg-surface border border-slate-800 rounded-xl p-4"><div class="text-slate-400 text-[10px]">Quota connecte / jour</div><div id="pvUserQuota" class="text-2xl font-extrabold text-emerald-400">-</div></div>
+    <div class="bg-surface border border-slate-800 rounded-xl p-4"><div class="text-slate-400 text-[10px]">RPS invite / connecte</div><div id="pvRps" class="text-2xl font-extrabold text-indigo-300">-</div></div>
+    <div class="bg-surface border border-slate-800 rounded-xl p-4"><div class="text-slate-400 text-[10px]">Banniere / Maintenance</div><div id="pvBanner" class="text-lg font-bold text-amber-300">-</div></div>
+  </div>
+
+  <div class="bg-surface border border-slate-800 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between p-4 border-b border-slate-800">
+      <h3 class="text-sm font-bold text-white"><i class="fa-solid fa-tags mr-2 text-blue-400"></i>Plans API</h3>
+      <div class="flex gap-2">
+        <button onclick="reloadPricing()" class="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px]">Recharger</button>
+        <button onclick="detectUiMatches()" class="px-3 py-1.5 rounded-lg bg-fuchsia-600 text-white text-[11px] font-semibold"><i class="fa-solid fa-magnifying-glass mr-1"></i>Detecter les prix des pages</button>
+        <button onclick="flushPricingCache()" class="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px]">Vider le cache</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto custom-scroll"><table class="w-full text-left text-xs text-slate-300 min-w-[1100px]">
+      <thead class="bg-dark/70 text-slate-400 uppercase font-mono border-b border-slate-800 text-[10px]"><tr>
+        <th class="px-3 py-2">plan_id</th><th class="px-3 py-2">Libelle</th><th class="px-3 py-2">EUR</th>
+        <th class="px-3 py-2">USD</th><th class="px-3 py-2">Quota API/j</th><th class="px-3 py-2">RPS</th>
+        <th class="px-3 py-2">Web illim.</th><th class="px-3 py-2">Quota web/j</th><th class="px-3 py-2">Public</th>
+        <th class="px-3 py-2">Ordre</th><th class="px-3 py-2">Texte a remplacer</th><th class="px-3 py-2"></th>
+      </tr></thead>
+      <tbody id="plansBody" class="divide-y divide-slate-800/60 font-mono text-[11px]"></tbody>
+    </table></div>
+    <div class="p-3 border-t border-slate-800">
+      <button onclick="addPlan()" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold"><i class="fa-solid fa-plus mr-1"></i>Ajouter un plan</button>
+    </div>
+  </div>
+
+  <div class="bg-surface border border-slate-800 rounded-xl overflow-hidden">
+    <div class="p-4 border-b border-slate-800"><h3 class="text-sm font-bold text-white"><i class="fa-solid fa-broom mr-2 text-amber-400"></i>Plans de suppression de donnees</h3></div>
+    <div class="overflow-x-auto custom-scroll"><table class="w-full text-left text-xs text-slate-300 min-w-[900px]">
+      <thead class="bg-dark/70 text-slate-400 uppercase font-mono border-b border-slate-800 text-[10px]"><tr>
+        <th class="px-3 py-2">plan_id</th><th class="px-3 py-2">Libelle</th><th class="px-3 py-2">Prix EUR</th>
+        <th class="px-3 py-2">Delai (h)</th><th class="px-3 py-2">Description</th><th class="px-3 py-2">Actif</th>
+        <th class="px-3 py-2">Ordre</th><th class="px-3 py-2">Texte a remplacer</th><th class="px-3 py-2"></th>
+      </tr></thead>
+      <tbody id="delBody" class="divide-y divide-slate-800/60 font-mono text-[11px]"></tbody>
+    </table></div>
+    <div class="p-3 border-t border-slate-800">
+      <button onclick="addDeletion()" class="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-[11px] font-semibold"><i class="fa-solid fa-plus mr-1"></i>Ajouter</button>
+    </div>
+  </div>
+
+  <div class="bg-surface border border-slate-800 rounded-xl overflow-hidden">
+    <div class="p-4 border-b border-slate-800"><h3 class="text-sm font-bold text-white"><i class="fa-solid fa-sliders mr-2 text-emerald-400"></i>Reglages globaux</h3></div>
+    <div id="settingsGrid" class="p-4 grid md:grid-cols-2 xl:grid-cols-3 gap-3 text-[11px]"></div>
+    <div class="p-4 border-t border-slate-800 flex flex-wrap gap-2">
+      <button onclick="saveSettings()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-[11px] font-semibold"><i class="fa-solid fa-floppy-disk mr-1"></i>Enregistrer</button>
+      <button onclick="resetSettings()" class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px]">Valeurs par defaut</button>
+      <span id="settingsMsg" class="text-[11px] text-slate-400 self-center"></span>
+    </div>
+  </div>
+
+  <div class="bg-surface border border-slate-800 rounded-xl overflow-hidden">
+    <div class="p-4 border-b border-slate-800">
+      <h3 class="text-sm font-bold text-white"><i class="fa-solid fa-wand-magic-sparkles mr-2 text-fuchsia-400"></i>Regles de reecriture des pages publiques</h3>
+      <p class="text-[11px] text-slate-500 mt-1">Chaque regle remplace un texte present dans les pages par un texte dynamique. Placeholders : <code class="text-emerald-300">{guest_daily_quota}</code>, <code class="text-emerald-300">{user_daily_quota}</code>, <code class="text-emerald-300">{plan:&lt;id&gt;:price_eur}</code>, <code class="text-emerald-300">{plan:&lt;id&gt;:daily_quota}</code>, <code class="text-emerald-300">{plan:&lt;id&gt;:label}</code>.</p>
+    </div>
+    <div class="p-4 space-y-2">
+      <textarea id="uiRules" rows="8" class="w-full bg-dark border border-slate-800 rounded-lg p-3 text-[11px] font-mono text-emerald-300"></textarea>
+      <div class="flex gap-2">
+        <button onclick="saveRules()" class="px-3 py-2 rounded-lg bg-fuchsia-600 text-white text-[11px] font-semibold">Enregistrer les regles</button>
+        <button onclick="testRules()" class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px]">Tester</button>
+      </div>
+      <pre id="rulesPreview" class="bg-dark border border-slate-800 rounded-lg p-3 text-[11px] text-slate-300 max-h-40 overflow-auto"></pre>
+    </div>
+  </div>
+</div>`;
+
+    /* ---------------- navigation ---------------- */
+    window.switchMainTab = function (tab) {
+        var active = { keys: 'bg-blue-600', users: 'bg-indigo-600', logs: 'bg-emerald-600', pricing: 'bg-fuchsia-600' };
+        ['keys', 'users', 'logs', 'pricing'].forEach(function (t) {
+            var cap = t.charAt(0).toUpperCase() + t.slice(1);
+            var content = document.getElementById('tabContent' + cap);
+            var btn = document.getElementById('tabBtn' + cap);
+            var on = (t === tab);
+            if (content) content.classList.toggle('hidden', !on);
+            if (btn) {
+                btn.classList.toggle('bg-surface', !on);
+                btn.classList.toggle('text-slate-400', !on);
+                btn.classList.toggle('text-white', on);
+                btn.classList.toggle(active[t], on);
+            }
+        });
+        if (tab === 'keys' && typeof fetchKeys === 'function') fetchKeys();
+        if (tab === 'users' && typeof fetchUsers === 'function') fetchUsers();
+        if (tab === 'logs') { fetchLogsStats(); fetchLogs(); }
+        if (tab === 'pricing') { loadPricingState(); loadPlans(); loadDeletions(); loadSettings(); }
+    };
+
+    /* ---------------- plans API ---------------- */
+    window.loadPlans = async function () {
+        var tb = document.getElementById('plansBody');
+        tb.innerHTML = '<tr><td colspan="12" class="px-3 py-4 text-slate-500">Chargement...</td></tr>';
+        try {
+            var res = await fetch('/admin/api/plans');
+            if (res.status === 401) { window.location.href = '/admin/login'; return; }
+            var list = await res.json();
+            tb.innerHTML = list.map(function (p, i) {
+                return '<tr data-pid="' + esc(p.plan_id) + '">' +
+                    '<td class="px-2 py-1 font-bold text-slate-200">' + esc(p.plan_id) + '</td>' +
+                    '<td class="px-2 py-1">' + inp('p' + i + '_label', p.label, 'text', 'w-28') + '</td>' +
+                    '<td class="px-2 py-1">' + inp('p' + i + '_eur', p.price_eur, 'number', 'w-20') + '</td>' +
+                    '<td class="px-2 py-1">' + inp('p' + i + '_usd', p.price_usd, 'number', 'w-20') + '</td>' +
+                    '<td class="px-2 py-1">' + inp('p' + i + '_quota', p.daily_quota, 'number', 'w-28') + '</td>' +
+                    '<td class="px-2 py-1">' + inp('p' + i + '_rps', p.rate_limit_rps, 'number', 'w-16') + '</td>' +
+                    '<td class="px-2 py-1">' + chk('p' + i + '_wu', p.web_unlimited) + '</td>' +
+                    '<td class="px-2 py-1">' + inp('p' + i + '_wq', p.web_daily_quota, 'number', 'w-20') + '</td>' +
+                    '<td class="px-2 py-1">' + chk('p' + i + '_pub', p.is_public) + '</td>' +
+                    '<td class="px-2 py-1">' + inp('p' + i + '_ord', p.sort_order, 'number', 'w-14') + '</td>' +
+                    '<td class="px-2 py-1">' + inp('p' + i + '_ui', p.ui_match, 'text', 'w-28') + '</td>' +
+                    '<td class="px-2 py-1 whitespace-nowrap">' +
+                    '<button onclick="savePlan(' + i + ')" class="px-2 py-1 rounded bg-emerald-600 text-white">OK</button> ' +
+                    '<button onclick="delPlan(\'' + esc(p.plan_id) + '\')" class="px-2 py-1 rounded bg-red-700 text-white">X</button></td></tr>';
+            }).join('') || '<tr><td colspan="12" class="px-3 py-4 text-slate-500">Aucun plan</td></tr>';
+            window.__plans = list;
+        } catch (e) { tb.innerHTML = '<tr><td colspan="12" class="px-3 py-4 text-red-400">Erreur</td></tr>'; }
+    };
+
+    function planBody(i, pid) {
+        function v(s) { var e = document.getElementById('p' + i + '_' + s); return e ? e.value : ''; }
+        function c(s) { var e = document.getElementById('p' + i + '_' + s); return e && e.checked ? 1 : 0; }
+        return {
+            plan_id: pid, label: v('label'), price_eur: parseFloat(v('eur') || 0),
+            price_usd: parseFloat(v('usd') || 0), daily_quota: parseInt(v('quota') || 0, 10),
+            rate_limit_rps: parseInt(v('rps') || 0, 10), web_unlimited: c('wu'),
+            web_daily_quota: parseInt(v('wq') || 0, 10), is_public: c('pub'),
+            sort_order: parseInt(v('ord') || 0, 10), ui_match: v('ui')
+        };
+    }
+
+    window.savePlan = async function (i) {
+        var p = window.__plans[i];
+        await fetch('/admin/api/plans/' + encodeURIComponent(p.plan_id), {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(planBody(i, p.plan_id))
+        });
+        loadPlans(); loadPricingState();
+    };
+
+    window.delPlan = async function (pid) {
+        if (!confirm('Supprimer le plan ' + pid + ' ?')) return;
+        await fetch('/admin/api/plans/' + encodeURIComponent(pid), { method: 'DELETE' });
+        loadPlans(); loadPricingState();
+    };
+
+    window.addPlan = async function () {
+        var pid = prompt('plan_id du nouveau plan ?');
+        if (!pid) return;
+        await fetch('/admin/api/plans', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan_id: pid, label: pid, is_public: 1, sort_order: 99 })
+        });
+        loadPlans(); loadPricingState();
+    };
+
+    /* ---------------- plans de suppression ---------------- */
+    window.loadDeletions = async function () {
+        var tb = document.getElementById('delBody');
+        try {
+            var res = await fetch('/admin/api/deletion-plans');
+            var list = await res.json();
+            window.__dels = list;
+            tb.innerHTML = list.map(function (p, i) {
+                return '<tr>' +
+                    '<td class="px-2 py-1 font-bold text-slate-200">' + esc(p.plan_id) + '</td>' +
+                    '<td class="px-2 py-1">' + inp('d' + i + '_label', p.label, 'text', 'w-28') + '</td>' +
+                    '<td class="px-2 py-1">' + inp('d' + i + '_eur', p.price_eur, 'number', 'w-20') + '</td>' +
+                    '<td class="px-2 py-1">' + inp('d' + i + '_delay', p.delay_hours, 'number', 'w-16') + '</td>' +
+                    '<td class="px-2 py-1">' + inp('d' + i + '_desc', p.description, 'text', 'w-56') + '</td>' +
+                    '<td class="px-2 py-1">' + chk('d' + i + '_act', p.is_active) + '</td>' +
+                    '<td class="px-2 py-1">' + inp('d' + i + '_ord', p.sort_order, 'number', 'w-14') + '</td>' +
+                    '<td class="px-2 py-1">' + inp('d' + i + '_ui', p.ui_match, 'text', 'w-24') + '</td>' +
+                    '<td class="px-2 py-1 whitespace-nowrap"><button onclick="saveDeletion(' + i + ')" class="px-2 py-1 rounded bg-emerald-600 text-white">OK</button> ' +
+                    '<button onclick="delDeletion(\'' + esc(p.plan_id) + '\')" class="px-2 py-1 rounded bg-red-700 text-white">X</button></td></tr>';
+            }).join('') || '<tr><td colspan="9" class="px-3 py-4 text-slate-500">Aucun</td></tr>';
+        } catch (e) { tb.innerHTML = '<tr><td colspan="9" class="px-3 py-4 text-red-400">Erreur</td></tr>'; }
+    };
+
+    window.saveDeletion = async function (i) {
+        var p = window.__dels[i];
+        function v(s) { var e = document.getElementById('d' + i + '_' + s); return e ? e.value : ''; }
+        function c(s) { var e = document.getElementById('d' + i + '_' + s); return e && e.checked ? 1 : 0; }
+        await fetch('/admin/api/deletion-plans/' + encodeURIComponent(p.plan_id), {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plan_id: p.plan_id, label: v('label'), price_eur: parseFloat(v('eur') || 0),
+                delay_hours: parseInt(v('delay') || 0, 10), description: v('desc'),
+                is_active: c('act'), sort_order: parseInt(v('ord') || 0, 10), ui_match: v('ui')
+            })
+        });
+        loadDeletions();
+    };
+
+    window.delDeletion = async function (pid) {
+        if (!confirm('Supprimer ' + pid + ' ?')) return;
+        await fetch('/admin/api/deletion-plans/' + encodeURIComponent(pid), { method: 'DELETE' });
+        loadDeletions();
+    };
+
+    window.addDeletion = async function () {
+        var pid = prompt('plan_id ?');
+        if (!pid) return;
+        await fetch('/admin/api/deletion-plans', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan_id: pid, label: pid, is_active: 1, sort_order: 99 })
+        });
+        loadDeletions();
+    };
+
+    /* ---------------- reglages ---------------- */
+    var LABELS = {
+        guest_daily_quota: 'Quota invite / jour', user_daily_quota: 'Quota connecte / jour',
+        default_plan_daily_quota: 'Quota API par defaut / jour', default_plan_rps: 'RPS API par defaut',
+        global_rps_guest: 'RPS invite (par seconde)', global_rps_user: 'RPS connecte (par seconde)',
+        registration_open: 'Inscriptions ouvertes', maintenance_mode: 'Mode maintenance',
+        maintenance_text: 'Texte maintenance', banner_enabled: 'Banniere active',
+        banner_type: 'Type banniere (info/warning/danger/success)', banner_text: 'Texte banniere',
+        banner_until: 'Banniere expire le (ISO)', price_format_eur: 'Format prix EUR',
+        price_format_usd: 'Format prix USD', signup_otp_ttl: 'TTL OTP (s)',
+        session_ttl_days: 'Duree de session (jours)'
+    };
+
+    var BOOLS = { registration_open: 1, maintenance_mode: 1, banner_enabled: 1 };
+    var SELECTS = {
+        banner_type: ['info', 'warning', 'danger', 'success']
+    };
+
+    window.loadSettings = async function () {
+        var grid = document.getElementById('settingsGrid');
+        try {
+            var res = await fetch('/admin/api/settings');
+            var d = await res.json();
+            var v = d.values || {};
+            grid.innerHTML = Object.keys(d.defaults || v).map(function (k) {
+                var val = v[k] !== undefined ? v[k] : '';
+                var field;
+                if (BOOLS[k]) {
+                    var on = String(val) === '1' || String(val).toLowerCase() === 'true';
+                    field = '<label class="flex items-center gap-2 bg-dark border border-slate-800 rounded px-2 py-1.5">' +
+                        '<input id="st_' + k + '" type="checkbox" class="accent-emerald-500" ' + (on ? 'checked' : '') + ' onchange="previewBanner()">' +
+                        '<span class="text-slate-300">' + (on ? 'ACTIF' : 'inactif') + '</span></label>';
+                } else if (SELECTS[k]) {
+                    field = '<select id="st_' + k + '" class="w-full bg-dark border border-slate-800 rounded px-2 py-1 text-[11px] text-white">' +
+                        SELECTS[k].map(function (o) {
+                            return '<option value="' + o + '" ' + (o === val ? 'selected' : '') + '>' + o + '</option>';
+                        }).join('') + '</select>';
+                } else {
+                    field = '<input id="st_' + k + '" value="' + esc(val) + '" class="w-full bg-dark border border-slate-800 rounded px-2 py-1 text-[11px] text-white">';
+                }
+                return '<div><div class="text-slate-400 mb-1">' + esc(LABELS[k] || k) +
+                    '<span class="text-slate-600 font-mono ml-1">' + esc(k) + '</span></div>' + field + '</div>';
+            }).join('');
+            var rules = document.getElementById('uiRules');
+            if (rules) rules.value = v.ui_rules || '[]';
+            previewBanner();
+        } catch (e) { grid.innerHTML = '<div class="text-red-400">Erreur</div>'; }
+    };
+
+    window.previewBanner = function () {
+        var box = document.getElementById('bannerPreview');
+        if (!box) return;
+        var on = document.getElementById('st_banner_enabled');
+        var txt = document.getElementById('st_banner_text');
+        var typ = document.getElementById('st_banner_type');
+        if (!on || !txt) return;
+        var colors = {
+            info: 'bg-blue-600/20 border-blue-700 text-blue-100',
+            warning: 'bg-amber-600/20 border-amber-700 text-amber-100',
+            danger: 'bg-red-600/20 border-red-700 text-red-100',
+            success: 'bg-emerald-600/20 border-emerald-700 text-emerald-100'
+        };
+        var c = colors[typ ? typ.value : 'info'] || colors.info;
+        box.innerHTML = on.checked
+            ? '<div class="border rounded-lg px-3 py-2 text-[12px] ' + c + '"><i class="fa-solid fa-bullhorn mr-2"></i>' +
+              esc(txt.value || 'Annonce BrixHub') + '</div>'
+            : '<div class="text-slate-500 text-[11px]">Banniere desactivee</div>';
+    };
+
+    window.saveSettings = async function () {
+        var values = {};
+        document.querySelectorAll('[id^="st_"]').forEach(function (el) {
+            var k = el.id.slice(3);
+            values[k] = BOOLS[k] ? (el.checked ? '1' : '0') : el.value;
+        });
+        var msg = document.getElementById('settingsMsg');
+        msg.textContent = 'Enregistrement...';
+        var res = await fetch('/admin/api/settings', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ values: values })
+        });
+        msg.textContent = res.ok ? 'Enregistre. Pages publiques mises a jour.' : 'Erreur';
+        loadPricingState();
+    };
+
+    window.resetSettings = async function () {
+        if (!confirm('Remettre tous les reglages aux valeurs par defaut ?')) return;
+        await fetch('/admin/api/settings/reset', { method: 'POST' });
+        loadSettings(); loadPricingState();
+    };
+
+    window.saveRules = async function () {
+        var txt = document.getElementById('uiRules').value;
+        try { JSON.parse(txt); } catch (e) { alert('JSON invalide : ' + e.message); return; }
+        await fetch('/admin/api/settings', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ values: { ui_rules: txt } })
+        });
+        alert('Regles enregistrees.');
+    };
+
+    window.testRules = async function () {
+        var out = document.getElementById('rulesPreview');
+        try {
+            var cfg = await (await fetch('/api/config')).json();
+            var rules = JSON.parse(document.getElementById('uiRules').value || '[]');
+            out.textContent = rules.map(function (r) {
+                return '"' + (r.find || '') + '"  ->  ' + subst(r.replace || '', cfg);
+            }).join('\n') || '(aucune regle)';
+        } catch (e) { out.textContent = 'Erreur : ' + e.message; }
+    };
+
+    function subst(tpl, cfg) {
+        return String(tpl).replace(/\{([^}]+)\}/g, function (m, key) {
+            if (key === 'guest_daily_quota') return cfg.guest_daily_quota;
+            if (key === 'user_daily_quota') return cfg.user_daily_quota;
+            var p = key.split(':');
+            if (p[0] === 'plan' && p.length === 3) {
+                var pl = (cfg.plans || []).find(function (x) { return x.plan_id === p[1]; });
+                return pl ? pl[p[2]] : m;
+            }
+            return m;
+        });
+    }
+
+    window.loadPricingState = async function () {
+        try {
+            var s = await (await fetch('/admin/api/pricing/state')).json();
+            document.getElementById('pvGuestQuota').textContent = s.guest_daily_quota;
+            document.getElementById('pvUserQuota').textContent = s.user_daily_quota;
+            document.getElementById('pvRps').textContent = s.global_rps_guest + ' / ' + s.global_rps_user;
+            document.getElementById('pvBanner').textContent =
+                (s.banner_enabled ? 'ON' : 'off') + ' / ' + (s.maintenance_mode ? 'MAINTENANCE' : 'ok');
+        } catch (e) { }
+    };
+
+    window.detectUiMatches = async function () {
+        var r = await fetch('/admin/api/pricing/detect', { method: 'POST' });
+        if (!r.ok) { alert('Erreur de detection'); return; }
+        var d = await r.json();
+        var lines = (d.appliques || []).map(function (x) {
+            return x.plan_id + '  ->  "' + x.ui_match + '"  (' + x.page + ')';
+        });
+        alert('Pages scannees : ' + (d.pages_scannees || []).join(', ') + '\n\n' +
+              (lines.length ? 'Correspondances trouvees :\n' + lines.join('\n')
+                            : 'Aucun prix trouve. Remplis le champ "Texte a remplacer" a la main.'));
+        loadPlans();
+    };
+
+    window.reloadPricing = function () { loadPlans(); loadDeletions(); loadSettings(); loadPricingState(); };
+
+    window.flushPricingCache = async function () {
+        await fetch('/admin/api/pricing/flush', { method: 'POST' });
+        reloadPricing();
+        alert('Cache vide.');
+    };
+
+    /* ---------------- injection ---------------- */
+    function inject() {
+        var ref = document.getElementById('tabBtnLogs') || document.getElementById('tabBtnUsers');
+        if (!ref || document.getElementById('tabBtnPricing')) return;
+        var btn = document.createElement('button');
+        btn.id = 'tabBtnPricing';
+        btn.setAttribute('onclick', "switchMainTab('pricing')");
+        btn.className = 'px-4 py-2 rounded-xl bg-surface hover:bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-2 border border-slate-800';
+        btn.innerHTML = '<i class="fa-solid fa-tags"></i> <span>Tarifs &amp; Quotas</span>';
+        ref.insertAdjacentElement('afterend', btn);
+
+        var host = document.getElementById('tabContentUsers')
+            ? document.getElementById('tabContentUsers').parentElement : document.body;
+        var wrap = document.createElement('div');
+        wrap.innerHTML = SECTION;
+        while (wrap.firstChild) host.appendChild(wrap.firstChild);
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
+    else inject();
+})();

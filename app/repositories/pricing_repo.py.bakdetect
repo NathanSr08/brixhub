@@ -1,0 +1,186 @@
+"""CRUD plans API, plans de suppression et reglages globaux."""
+from datetime import datetime
+from decimal import Decimal
+
+from app.db.clickhouse import get_ch
+
+PLANS = "sports_db.plans"
+DELETION = "sports_db.deletion_plans"
+SETTINGS = "sports_db.platform_settings"
+
+PLAN_COLS = ["plan_id", "label", "price_eur", "price_usd", "daily_quota", "rate_limit_rps",
+             "web_unlimited", "web_daily_quota", "features", "is_public", "sort_order",
+             "is_deleted", "ui_match", "updated_at"]
+
+DELETION_COLS = ["plan_id", "label", "price_eur", "description", "delay_hours",
+                 "is_active", "sort_order", "is_deleted", "ui_match", "updated_at"]
+
+DEFAULT_SETTINGS = {
+    "guest_daily_quota": "2",
+    "user_daily_quota": "5",
+    "default_plan_daily_quota": "500",
+    "default_plan_rps": "2",
+    "global_rps_guest": "3",
+    "global_rps_user": "5",
+    "registration_open": "1",
+    "maintenance_mode": "0",
+    "maintenance_text": "BrixHub est en maintenance, revenez dans quelques minutes.",
+    "banner_enabled": "0",
+    "banner_type": "info",
+    "banner_text": "",
+    "banner_until": "",
+    "price_format_eur": "{value} EUR",
+    "price_format_usd": "${value}",
+    "ui_rules": "[]",
+    "signup_otp_ttl": "600",
+    "session_ttl_days": "14",
+}
+
+DEFAULT_PLANS = [
+    {"plan_id": "free", "label": "Free", "price_eur": 0, "price_usd": 0, "daily_quota": 500,
+     "rate_limit_rps": 2, "web_unlimited": 0, "web_daily_quota": 5, "is_public": 1, "sort_order": 10},
+    {"plan_id": "pro", "label": "Pro", "price_eur": 19, "price_usd": 21, "daily_quota": 50000,
+     "rate_limit_rps": 10, "web_unlimited": 1, "web_daily_quota": 0, "is_public": 1, "sort_order": 20},
+    {"plan_id": "business", "label": "Business", "price_eur": 79, "price_usd": 89, "daily_quota": 500000,
+     "rate_limit_rps": 25, "web_unlimited": 1, "web_daily_quota": 0, "is_public": 1, "sort_order": 30},
+    {"plan_id": "unlimited", "label": "Unlimited", "price_eur": 249, "price_usd": 279,
+     "daily_quota": 10000000, "rate_limit_rps": 50, "web_unlimited": 1, "web_daily_quota": 0,
+     "is_public": 1, "sort_order": 40},
+]
+
+
+def _dec(v) -> Decimal:
+    try:
+        return Decimal(str(v if v not in (None, "") else 0))
+    except Exception:
+        return Decimal("0")
+
+
+def _int(v, default=0) -> int:
+    try:
+        return int(v)
+    except Exception:
+        return default
+
+
+# ------------------------------- PLANS API ------------------------------- #
+def list_plans(public_only: bool = False) -> list[dict]:
+    q = (f"SELECT plan_id, label, price_eur, price_usd, daily_quota, rate_limit_rps, "
+         f"web_unlimited, web_daily_quota, features, is_public, sort_order, is_deleted, "
+         f"ui_match, updated_at FROM {PLANS} FINAL ORDER BY sort_order, plan_id")
+    out = []
+    for r in get_ch().query(q).result_rows:
+        d = dict(zip(["plan_id", "label", "price_eur", "price_usd", "daily_quota",
+                      "rate_limit_rps", "web_unlimited", "web_daily_quota", "features",
+                      "is_public", "sort_order", "is_deleted", "ui_match", "updated_at"], r))
+        d["price_eur"] = float(d["price_eur"] or 0)
+        d["price_usd"] = float(d["price_usd"] or 0)
+        for k in ("daily_quota", "rate_limit_rps", "web_unlimited", "web_daily_quota",
+                  "is_public", "sort_order", "is_deleted"):
+            d[k] = int(d[k] or 0)
+        d["updated_at"] = str(d["updated_at"])
+        if public_only and (d["is_deleted"] or not d["is_public"]):
+            continue
+        out.append(d)
+    return out
+
+
+def upsert_plan(data: dict) -> None:
+    row = [
+        str(data["plan_id"]).strip(), str(data.get("label", "")),
+        _dec(data.get("price_eur")), _dec(data.get("price_usd")),
+        _int(data.get("daily_quota")), _int(data.get("rate_limit_rps")),
+        _int(data.get("web_unlimited")), _int(data.get("web_daily_quota")),
+        str(data.get("features", "[]") or "[]"), _int(data.get("is_public", 1), 1),
+        _int(data.get("sort_order")), _int(data.get("is_deleted")),
+        str(data.get("ui_match", "")), datetime.utcnow(),
+    ]
+    get_ch().insert(PLANS, data=[row], column_names=PLAN_COLS)
+
+
+def delete_plan(plan_id: str) -> bool:
+    plans = {p["plan_id"]: p for p in list_plans()}
+    if plan_id not in plans:
+        return False
+    p = dict(plans[plan_id])
+    p["is_deleted"] = 1
+    upsert_plan(p)
+    return True
+
+
+# --------------------------- PLANS DE SUPPRESSION --------------------------- #
+def list_deletion_plans(public_only: bool = False) -> list[dict]:
+    q = (f"SELECT plan_id, label, price_eur, description, delay_hours, is_active, "
+         f"sort_order, is_deleted, ui_match, updated_at FROM {DELETION} FINAL "
+         f"ORDER BY sort_order, plan_id")
+    out = []
+    for r in get_ch().query(q).result_rows:
+        d = dict(zip(["plan_id", "label", "price_eur", "description", "delay_hours",
+                      "is_active", "sort_order", "is_deleted", "ui_match", "updated_at"], r))
+        d["price_eur"] = float(d["price_eur"] or 0)
+        for k in ("delay_hours", "is_active", "sort_order", "is_deleted"):
+            d[k] = int(d[k] or 0)
+        d["updated_at"] = str(d["updated_at"])
+        if public_only and (d["is_deleted"] or not d["is_active"]):
+            continue
+        out.append(d)
+    return out
+
+
+def upsert_deletion_plan(data: dict) -> None:
+    row = [
+        str(data["plan_id"]).strip(), str(data.get("label", "")), _dec(data.get("price_eur")),
+        str(data.get("description", "")), _int(data.get("delay_hours"), 24),
+        _int(data.get("is_active", 1), 1), _int(data.get("sort_order")),
+        _int(data.get("is_deleted")), str(data.get("ui_match", "")), datetime.utcnow(),
+    ]
+    get_ch().insert(DELETION, data=[row], column_names=DELETION_COLS)
+
+
+def delete_deletion_plan(plan_id: str) -> bool:
+    plans = {p["plan_id"]: p for p in list_deletion_plans()}
+    if plan_id not in plans:
+        return False
+    p = dict(plans[plan_id])
+    p["is_deleted"] = 1
+    upsert_deletion_plan(p)
+    return True
+
+
+# ------------------------------- REGLAGES ------------------------------- #
+def get_settings() -> dict:
+    rows = get_ch().query(f"SELECT key, value FROM {SETTINGS} FINAL").result_rows
+    out = dict(DEFAULT_SETTINGS)
+    for r in rows:
+        out[str(r[0])] = str(r[1])
+    return out
+
+
+def set_setting(key: str, value: str) -> None:
+    get_ch().insert(SETTINGS, data=[[key, str(value), datetime.utcnow()]],
+                    column_names=["key", "value", "updated_at"])
+
+
+def set_settings(mapping: dict) -> int:
+    n = 0
+    for k, v in (mapping or {}).items():
+        if k in DEFAULT_SETTINGS or str(k).startswith("custom."):
+            set_setting(str(k), "" if v is None else str(v))
+            n += 1
+    return n
+
+
+def reset_settings() -> None:
+    for k, v in DEFAULT_SETTINGS.items():
+        set_setting(k, v)
+
+
+def ensure_defaults() -> None:
+    """Cree les reglages manquants et les plans par defaut si la table est vide."""
+    existing = get_settings()
+    for k, v in DEFAULT_SETTINGS.items():
+        if k not in existing:
+            set_setting(k, v)
+    if not list_plans():
+        for p in DEFAULT_PLANS:
+            upsert_plan(p)

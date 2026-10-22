@@ -19,14 +19,31 @@ from app.db.clickhouse import init_clients, close_clients
 from app.api.v1.router import api_v1
 from app.api.legacy import router as legacy
 from app.repositories import usage_repo
+from app.core import audit
+from app.db import bootstrap
+from app.api.admin_logs import router as admin_logs_router
+from app.api.admin_pricing import router as pricing_router, public_router as config_router
+from app.api.admin_web_access import router as admin_web_access_router
+from starlette.concurrency import run_in_threadpool
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_clients()
-    task = asyncio.create_task(usage_repo.flush_loop())
+    # BRIXHUB-AUDIT : verification du schema + tables d'audit au demarrage
+    await run_in_threadpool(bootstrap.ensure_schema)
+    await run_in_threadpool(bootstrap.ensure_pricing_defaults)
+    await run_in_threadpool(audit.ensure_audit_table)
+    usage_task = asyncio.create_task(usage_repo.flush_loop())
+    audit_task = asyncio.create_task(audit.flush_loop())
     yield
-    task.cancel()
+    usage_task.cancel()
+    audit_task.cancel()
+    try:
+        await audit.flush_now()
+    except Exception:
+        pass
     await close_clients()
+
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -36,23 +53,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    @app.middleware("http")
-    async def usage_logger(request: Request, call_next):
-        start = time.perf_counter()
-        response = await call_next(request)
-        key_id = getattr(request.state, "key_id", None)
-        if key_id and request.url.path.startswith("/v1/"):
-            ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-                  or (request.client.host if request.client else "?"))
-            latency = int((time.perf_counter() - start) * 1000)
-            full_endpoint = request.url.path + (f"?{request.url.query}" if request.url.query else "")
-            await usage_repo.add_usage(
-                key_id, full_endpoint, response.status_code,
-                latency, ip
-            )
-            for k, v in getattr(request.state, "quota_headers", {}).items():
-                response.headers[k] = v
-        return response
+    app.middleware("http")(audit.audit_middleware)
+    app.include_router(admin_logs_router)
+    app.include_router(pricing_router)
+    app.include_router(admin_web_access_router)
+    app.include_router(config_router)
+
 
     # Routes v1 avec prefixe
     app.include_router(api_v1, prefix="/v1")
@@ -62,7 +68,7 @@ def create_app() -> FastAPI:
     # Routes legacy (/api/*) et WebSocket
     app.include_router(legacy)
     # Fichiers statiques UI
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     return app
 

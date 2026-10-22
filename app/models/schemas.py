@@ -16,6 +16,7 @@ class MembreRecord(BaseModel):
     iban: str = ""
     bic: str = ""
     source: str = ""
+    profile_ref: str = ""
 
     class Config:
         populate_by_name = True

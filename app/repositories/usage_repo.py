@@ -1,11 +1,14 @@
-import asyncio, json
+import asyncio
+import json
+import threading
+
 from app.db.clickhouse import get_ch
 
 USAGE_TABLE = "sports_db.api_usage"
 LOG_TABLE = "sports_db.search_log"
 
 _buffer: list[list] = []
-_lock = asyncio.Lock()
+_lock = threading.Lock()
 MAX_BUFFER = 200
 
 def _flush_sync(rows: list[list]) -> None:
@@ -17,7 +20,7 @@ def _flush_sync(rows: list[list]) -> None:
 
 async def add_usage(key_id: str, endpoint: str, status: int,
                     latency_ms: int, client_ip: str) -> None:
-    async with _lock:
+    with _lock:
         _buffer.append([key_id, endpoint, status, latency_ms, client_ip])
         if len(_buffer) >= MAX_BUFFER:
             rows, _buffer[:] = _buffer[:], []
@@ -29,7 +32,7 @@ async def add_usage(key_id: str, endpoint: str, status: int,
 async def flush_loop(interval: int = 15) -> None:
     while True:
         await asyncio.sleep(interval)
-        async with _lock:
+        with _lock:
             rows, _buffer[:] = _buffer[:], []
         if rows:
             await asyncio.to_thread(_flush_sync, rows)
@@ -61,11 +64,11 @@ def usage_today(key_id: str) -> int:
 
 
 def get_key_logs(key_id: str, limit: int = 100) -> list[dict]:
-    global _buffer
-    if _buffer:
+    with _lock:
+        rows, _buffer[:] = _buffer[:], []
+    if rows:
         try:
-            _flush_sync(_buffer[:])
-            _buffer.clear()
+            _flush_sync(rows)
         except Exception:
             pass
 

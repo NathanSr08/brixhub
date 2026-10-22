@@ -33,6 +33,7 @@ async def search(
                    ville=ville, tel=tel, mail=mail, source=source)
     results = await svc.search(limit=limit, **filters)
     criteria = svc.criteria_from(filters)
+    request.state.audit_meta = {"nb_results": len(results), "criteria": criteria}
     if criteria:
         ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
               or (request.client.host if request.client else "?"))

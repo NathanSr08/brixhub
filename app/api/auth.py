@@ -13,6 +13,7 @@ from app.core.auth_service import (
     validate_official_email, hash_password, verify_password, generate_session_token
 )
 from app.core.quotas import check_search_quota
+from app.core import pricing
 from app.db.clickhouse import get_redis
 from app.repositories import users_repo, keys_repo
 
@@ -85,22 +86,24 @@ async def logout(request: Request, response: Response):
 async def get_me(request: Request):
     token = request.headers.get("x-auth-session") or request.cookies.get("auth_session")
     if not token:
-        return {"logged_in": False, "plan": "guest", "limit": 2}
+        return {"logged_in": False, "plan": "guest", "limit": pricing.guest_daily_quota()}
     
     r = get_redis()
     user_id = await r.get(f"auth_session:{token}")
     if not user_id:
-        return {"logged_in": False, "plan": "guest", "limit": 2}
+        return {"logged_in": False, "plan": "guest", "limit": pricing.guest_daily_quota()}
     
     user = users_repo.get_by_id(user_id)
     if not user:
-        return {"logged_in": False, "plan": "guest", "limit": 2}
+        return {"logged_in": False, "plan": "guest", "limit": pricing.guest_daily_quota()}
 
     return {
         "logged_in": True,
         "email": user["email"],
         "plan": user["plan"],
-        "has_api_key": bool(user["api_key_id"])
+        "has_api_key": bool(user["api_key_id"]),
+        "limit": pricing.plan_web_quota(user["plan"]),
+        "unlimited": pricing.plan_web_unlimited(user["plan"]),
     }
 
 @router.post("/link-key")

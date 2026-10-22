@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Recherche Centralisée | Moteur d'investigation multi-sources</title>
+    <meta name="description" content="Plateforme d'indexation et d'investigation OSINT unifiée. Croisez les identités, numéros de téléphone, adresses et emails à travers des millions de données indexées.">
+    <meta name="robots" content="index, follow">
+
+    <link rel="icon" type="image/x-icon" href="/static/og-banner.png">
+    <script src="https://cdn.tailwindcss.com">
+        // ==========================================
+        // FLUX OTP SÉCURISÉ : INSCRIPTION & FORGOT
+        // ==========================================
+        let otpSignupPendingEmail = '';
+        let otpForgotPendingEmail = '';
+
+        function toggleSignupStep(step) {
+            hideAuthAlert();
+            const s1 = document.getElementById('signupStep1');
+            const s2 = document.getElementById('signupStep2');
+            if (step === 1) {
+                if (s1) s1.classList.remove('hidden');
+                if (s2) s2.classList.add('hidden');
+            } else {
+                if (s1) s1.classList.add('hidden');
+                if (s2) s2.classList.remove('hidden');
+            }
+        }
+
+        
+
+        
+
+        
+
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow-x: hidden;
+        }
+        .card-bg { background-color: #111827; border: 1px solid #1f293d; }
+        .subcard-bg { background-color: #0d1322; border: 1px solid #1a2333; }
+        .input-bg { background-color: #0b0f19; border: 1px solid #243048; }
+        .input-bg:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 1px #6366f1; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(17, 24, 39, 0.6); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+    
+        
+        /* Neutralisation stricte de l'autofill natif blanc */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 1000px #0b0f19 inset !important;
+            -webkit-text-fill-color: #f1f5f9 !important;
+            border-color: #243048 !important;
+            caret-color: #f1f5f9 !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-6 px-3 sm:px-6 flex flex-col items-center relative">
+<header class="w-full max-w-4xl flex items-center justify-between mb-4 z-40 px-1 gap-2">
+        <div class="flex items-center gap-2">
+            <!-- Compteur En Ligne -->
+            <div class="flex items-center space-x-1.5 bg-gray-900/95 border border-emerald-500/30 px-3 py-1 rounded-full shadow-lg backdrop-blur-md select-none text-[11px]">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-gray-300 font-medium hidden sm:inline">En ligne :</span>
+                <span id="badgeOnlineCount" class="font-bold font-mono text-emerald-300">1</span>
+            </div>
+
+            <!-- Stats Base -->
+            <div id="statsContainer" class="relative">
+                <button id="btnStatsToggle" onclick="toggleStatsPopup(event)" type="button" class="flex items-center space-x-1.5 bg-gray-900/95 border border-indigo-500/40 hover:border-indigo-400 px-3 py-1 rounded-full shadow-lg backdrop-blur-md cursor-pointer transition select-none text-[11px]">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-gray-300 font-medium hidden sm:inline">Base :</span>
+                    <span id="badgeTotalRecords" class="font-bold font-mono text-indigo-300">...</span>
+                    <span class="text-[9px] text-gray-500">▼</span>
+                </button>
+
+                <div id="statsPopover" class="hidden absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-72 sm:w-80 bg-[#0e1626] border border-gray-700/80 rounded-2xl shadow-2xl p-4 z-50">
+                    <div class="flex items-center justify-between border-b border-gray-800 pb-2 mb-3">
+                        <span class="text-xs font-semibold text-white tracking-wide">Volume des données</span>
+                        <span id="popoverTotal" class="text-xs font-mono font-bold text-emerald-400">0</span>
+                    </div>
+                    <div id="sourcesStatsList" class="custom-scroll space-y-2 max-h-80 overflow-y-auto pr-1 text-xs">
+                        <p class="text-gray-500 text-center py-2">Chargement...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bouton Espace Utilisateur / Connexion -->
+        <div id="userAuthSection" class="flex items-center gap-2">
+            <button onclick="openAuthModal('signin')" id="btnOpenAuth" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-semibold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30">
+                <i class="fa-solid fa-user text-[11px]"></i> <span>Connexion</span>
+            </button>
+            
+            <div id="userLoggedInBlock" class="hidden flex items-center gap-2">
+                <button onclick="openAccountModal()" class="px-3 py-1 bg-[#131b2e] hover:bg-[#1a253f] border border-blue-500/40 rounded-full text-xs text-white flex items-center gap-2 transition">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span id="headerUserEmail" class="font-mono text-[11px] max-w-[120px] sm:max-w-[180px] truncate">user@gmail.com</span>
+                    <span id="headerUserPlan" class="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[10px] font-mono uppercase">FREE</span>
+                </button>
+                <button onclick="handleLogout()" title="Déconnexion" class=\"p-1.5 text-slate-400 hover:text-white bg-[#0b0f19] text-slate-100 focus:bg-[#0f172a]/60 rounded-full border border-slate-700/60 transition text-xs\">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Titre -->
+    <div class="text-center mb-6 px-2">
+        <p class="text-[10px] sm:text-xs font-semibold tracking-widest text-indigo-400 uppercase mb-1">RECHERCHE CENTRALISÉE</p>
+        <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-1.5">Un critère. Tout ce qui a fuité.</h1>
+        <p class="text-xs sm:text-sm text-gray-400">Recherchez dans les données unifiées et indexées.</p>
+    </div>
+
+    <!-- Bannière Telegram -->
+    <div class="w-full max-w-4xl mb-6">
+        <div class="bg-[#0b1419]/90 border border-emerald-900/60 rounded-xl px-4 py-2.5 shadow-lg flex items-center justify-center text-center">
+            <p class="text-xs text-gray-300">
+                Demande de suppression :
+                <a href="https://t.me/leakfrench" target="_blank" rel="noopener noreferrer" class="font-bold text-emerald-400 hover:text-emerald-300 ml-1 underline transition">
+                    @leakfrench
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <!-- BANDEAU SERVICE SUPPRESSION RESPONSIVE -->
+    <div id="gdprRemovalBanner" class="w-full max-w-4xl mb-6 transition-all duration-300">
+        <div class="relative bg-gradient-to-b from-[#131b2e]/95 to-[#0b101d]/95 backdrop-blur-xl border border-blue-500/30 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-2xl overflow-hidden">
+            
+            <button onclick="dismissRemovalBanner()" type="button" title="Fermer" 
+                    class="absolute top-3 right-3 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full w-7 h-7 flex items-center justify-center text-xs transition z-20">
+                ✕
+            </button>
+
+            <div class="pr-6 mb-5">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium mb-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Nettoyage d'Empreinte Express
+                </div>
+                <h3 class="text-lg sm:text-2xl font-black text-white tracking-tight">Vos données apparaissent dans nos bases ?</h3>
+                <p class="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
+                    Déréférencement définitif et blacklistage immédiat de vos coordonnées de toutes les corrélations.
+                </p>
+            </div>
+
+            <!-- Grille Mobile 1 Col / Desktop 3 Cols -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                
+                <!-- 10€ -->
+                <div class="bg-[#0e1424]/90 border border-slate-800 p-4 rounded-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-slate-400 uppercase">Fiche Unique</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 font-mono">Retrait 2h</span>
+                        </div>
+                        <div class="mt-2 flex items-baseline gap-1">
+                            <span class="text-2xl sm:text-3xl font-black text-white">10 €</span>
+                            <span class="text-xs text-slate-400">/ fiche</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Suppression immédiate d'une ligne ou d'un numéro précis.</p>
+                    </div>
+                    <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20supprimer%201%20fiche%20(10€)" target="_blank"
+                       class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center rounded-lg transition border border-slate-700 block">
+                        Supprimer 1 entrée
+                    </a>
+                </div>
+
+                <!-- 25€ -->
+                <div class="relative bg-gradient-to-b from-[#16223b] to-[#10192e] border-2 border-blue-500 p-4 rounded-xl flex flex-col justify-between shadow-lg shadow-blue-500/10">
+                    <span class="absolute -top-2.5 right-3 bg-blue-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full">Recommandé</span>
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-blue-400 uppercase">Pack Identité</span>
+                            <span class="px-2 py-0.5 rounded bg-blue-500/20 text-[10px] text-blue-300 font-mono">5 Fiches</span>
+                        </div>
+                        <div class="mt-2 flex items-baseline gap-1">
+                            <span class="text-2xl sm:text-3xl font-black text-white">25 €</span>
+                            <span class="text-xs text-blue-300">/ identité</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 mt-1">Purge intégrale de toutes vos variantes (tél, adresses, emails liés).</p>
+                    </div>
+                    <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20le%20Pack%20Identité%20(25€)" target="_blank"
+                       class="mt-4 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold text-center rounded-lg transition shadow-md shadow-blue-600/30 block">
+                        Nettoyer mon Identité
+                    </a>
+                </div>
+
+                <!-- 49€ -->
+                <div class="bg-[#0e1424]/90 border border-slate-800 p-4 rounded-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-purple-400 uppercase">Wipeout + Veille</span>
+                            <span class="px-2 py-0.5 rounded bg-purple-500/10 text-[10px] text-purple-300 font-mono">6 Mois</span>
+                        </div>
+                        <div class="mt-2 flex items-baseline gap-1">
+                            <span class="text-2xl sm:text-3xl font-black text-white">49 €</span>
+                            <span class="text-xs text-slate-400">/ complet</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Suppression totale + surveillance et blacklistage 6 mois.</p>
+                    </div>
+                    <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20le%20Pack%20Wipeout%20(49€)" target="_blank"
+                       class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center rounded-lg transition border border-slate-700 block">
+                        Wipeout & Veille 6 Mois
+                    </a>
+                </div>
+
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
+                <span>✔ Crypto &bull; Anonymat garanti &bull; Traitement direct</span>
+                <a href="/rgpd" class="text-blue-400 hover:underline">Procédure légale gratuite (30j) &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- BANNIÈRE ALERTE QUOTA STYLE BOOTSTRAP MODERNISÉ -->
+    <div id="quotaExceededBanner" style="display: none;" class="w-full max-w-4xl mx-auto mb-6 transition-all duration-300">
+        <div class="relative bg-[#160b10] border-2 border-red-500/80 rounded-2xl p-4 sm:p-5 shadow-[0_0_30px_rgba(239,68,68,0.25)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-3.5">
+                <div class="p-2.5 rounded-xl bg-red-500/20 text-red-400 text-xl flex-shrink-0 border border-red-500/30">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-red-500/20 text-red-300 border border-red-500/40">Limite journalière</span>
+                        <h4 id="quotaBannerTitle" class="text-sm sm:text-base font-bold text-white">Vos 5 requêtes quotidiennes sont épuisées</h4>
+                    </div>
+                    <p id="quotaBannerDesc" class="text-xs text-slate-300 leading-relaxed">
+                        Votre quota gratuit se réinitialise à minuit. Pour continuer vos recherches dès maintenant sans limite, associez une clé API.
+                    </p>
+                </div>
+            </div>
+            <div id="quotaBannerActions" class="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                <button type="button" onclick="openAccountModal()" class="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-blue-500/20 whitespace-nowrap">
+                    <i class="fa-solid fa-key mr-1.5"></i> Lier une clé API
+                </button>
+                <button type="button" onclick="document.getElementById('quotaExceededBanner').style.display='none'" class="p-2 text-slate-400 hover:text-white rounded-lg transition" title="Fermer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Boîte principale Formulaire -->
+    <div class="w-full max-w-4xl card-bg rounded-2xl p-4 sm:p-6 shadow-2xl">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm sm:text-base font-semibold text-white">Critères de recherche</h2>
+            <!-- Statut Quota Actuel -->
+            <div id="quotaStatusBadge" class="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                <i class="fa-solid fa-gauge-high mr-1 text-indigo-400"></i> <span id="quotaText">Visiteur : 2 req / jour</span>
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 mb-4 sm:mb-6">Remplissez un ou plusieurs champs.</p>
+
+        <!-- Recherche Globale -->
+        <div class="subcard-bg rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 border border-indigo-900/40">
+            <label class="flex items-center text-xs font-medium text-indigo-300 mb-1.5">
+                <span class="mr-1.5">⚡</span> Recherche Globale (Nom, Prénom, Email, etc.)
+            </label>
+            <input type="text" id="q" placeholder="Ex : Martin Dupont, ou mot-clé..." class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+        </div>
+
+        <!-- Source -->
+        <div class="subcard-bg rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
+            <label class="flex items-center text-xs font-medium text-gray-300 mb-1.5">
+                <span class="mr-1.5">🛰️</span> Source de données
+            </label>
+            <select id="source" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                <option value="ALL">Toutes les sources</option>
+            </select>
+        </div>
+
+        <!-- Identité & Naissance -->
+        <div class="subcard-bg rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
+            <label class="flex items-center text-xs font-medium text-gray-300 mb-2">
+                <span class="mr-1.5">👤</span> Identité & Naissance
+            </label>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Nom</label>
+                    <input type="text" id="nom" placeholder="Ex : DUPONT" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Prénom</label>
+                    <input type="text" id="prenom" placeholder="Ex : Alexandre" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-800/60">
+                <div class="col-span-2 sm:col-span-1">
+                    <label class="block text-[10px] text-gray-400 mb-1">Date complète</label>
+                    <input type="text" id="date_naissance" placeholder="15/04/1988" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Jour (JJ)</label>
+                    <input type="text" id="jour" placeholder="15" maxlength="2" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Mois (MM)</label>
+                    <input type="text" id="mois" placeholder="04" maxlength="2" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Année (AAAA)</label>
+                    <input type="text" id="annee" placeholder="1988" maxlength="4" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+            </div>
+        </div>
+
+        <!-- Localisation & Contact -->
+        <div class="subcard-bg rounded-xl p-3 sm:p-4 mb-5">
+            <label class="flex items-center text-xs font-medium text-gray-300 mb-2">
+                <span class="mr-1.5">📍</span> Localisation & Contact
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Code Postal</label>
+                    <input type="text" id="code_postal" placeholder="75008" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Ville</label>
+                    <input type="text" id="ville" placeholder="Lyon" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Téléphone</label>
+                    <input type="text" id="tel" placeholder="0612345678" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Email</label>
+                    <input type="text" id="mail" placeholder="contact@domaine.fr" class="w-full input-bg rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-200">
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-3">
+            <button id="btnSearch" onclick="runSearch()" class="flex-1 sm:flex-initial flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-medium px-6 py-2.5 rounded-lg transition shadow-md">
+                <span class="mr-1.5">🔍</span> Rechercher
+            </button>
+            <button onclick="clearFields()" class="border border-gray-700 hover:bg-gray-800 text-gray-300 text-xs sm:text-sm font-medium px-4 py-2.5 rounded-lg transition">
+                Effacer
+            </button>
+            <span id="loading" class="text-xs text-indigo-400 hidden animate-pulse">Recherche...</span>
+        </div>
+    </div>
+
+    <!-- Résultats avec Scroll Horizontal -->
+    <div id="resultsWrapper" class="w-full max-w-6xl mt-6 hidden">
+        <div class="flex justify-between items-center mb-2 px-1">
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-300">
+                Résultats : <span id="count" class="text-indigo-400 font-bold">0</span>
+            </h3>
+            <span class="text-[10px] text-gray-500 sm:block hidden">Glissez horizontalement pour voir toutes les colonnes</span>
+        </div>
+        <div class="card-bg rounded-xl overflow-x-auto custom-scroll border border-gray-800">
+            <table class="w-full text-left text-xs whitespace-nowrap min-w-[700px]">
+                <thead class="bg-[#0e1626] text-gray-400 border-b border-gray-800 uppercase tracking-wider text-[10px]">
+                    <tr>
+                        <th class="p-3">Source</th>
+                        <th class="p-3">Nom & Prénom</th>
+                        <th class="p-3">Naissance</th>
+                        <th class="p-3">Téléphone</th>
+                        <th class="p-3">Email</th>
+                        <th class="p-3">Adresse / Ville</th>
+                        <th class="p-3">IBAN</th>
+                        <th class="p-3">BIC</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody" class="divide-y divide-gray-800 text-gray-300"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MODALE ENRICHIE : JSON + MÊME PERSONNE -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+        <div class="card-bg w-full max-w-4xl rounded-2xl border border-gray-700 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div class="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-800 bg-[#0e1626]">
+                <div class="flex items-center space-x-2">
+                    <span class="text-indigo-400 text-lg">🧠</span>
+                    <div>
+                        <h3 id="modalTitle" class="text-xs sm:text-sm font-bold text-white tracking-wide">Fiche & Analyse</h3>
+                        <p class="text-[10px] text-gray-400" id="modalSubtitle">-</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="btnCopyJson" onclick="copyModalJson()" class="text-[11px] bg-gray-800 text-gray-300 px-2.5 py-1 rounded border border-gray-700">
+                        Copier
+                    </button>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-white p-1 text-lg">✕</button>
+                </div>
+            </div>
+
+            <div class="flex border-b border-gray-800 bg-[#0a0f1d] px-3 sm:px-6 text-xs font-medium overflow-x-auto custom-scroll whitespace-nowrap">
+                <button onclick="switchModalTab('matches')" id="tabBtnMatches" class="py-2.5 px-3 border-b-2 border-indigo-500 text-indigo-400 font-semibold">
+                    Même Personne <span id="badgeMatchesCount" class="ml-1 bg-indigo-950 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+                <button onclick="switchModalTab('family')" id="tabBtnFamily" class="py-2.5 px-3 border-b-2 border-transparent text-gray-400">
+                    Foyer / Famille <span id="badgeFamilyCount" class="ml-1 bg-emerald-950 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+                <button onclick="switchModalTab('raw')" id="tabBtnRaw" class="py-2.5 px-3 border-b-2 border-transparent text-gray-400">
+                    Données Brutes (JSON)
+                </button>
+            </div>
+
+            <div class="p-3 sm:p-6 overflow-y-auto bg-[#070b13] flex-1 custom-scroll text-xs">
+                <div id="tabContentMatches" class="space-y-3">
+                    <div id="matchesLoading" class="text-center py-6 text-gray-400 animate-pulse">Calcul des scores...</div>
+                    <div id="matchesList" class="space-y-2.5 hidden"></div>
+                </div>
+                <div id="tabContentFamily" class="space-y-3 hidden">
+                    <div id="familyList" class="space-y-2.5"></div>
+                </div>
+                <div id="tabContentRaw" class="hidden">
+                    <pre id="modalJsonContent" class="text-[11px] font-mono text-emerald-400 whitespace-pre-wrap break-all leading-relaxed"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE AUTHENTIFICATION (SIGNIN / SIGNUP / RESET) -->
+    <div id="authModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+        <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600"></div>
+            
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold text-sm">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <h3 id="authModalTitle" class="text-base font-bold text-white">Connexion Espace Membre</h3>
+                </div>
+                <button onclick="closeAuthModal()" class="text-slate-500 hover:text-white text-lg">✕</button>
+            </div>
+
+            <!-- Message d'alerte / Erreur -->
+            <div id="authAlert" class="hidden text-xs p-3 rounded-xl border flex items-center gap-2 font-medium"></div>
+
+            <!-- Formulaire Connexion -->
+            
+    
+    
+    <form id="formSignin" class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1 font-medium">Adresse Email</label>
+                    <input type="email" id="signinEmail" required placeholder="votre.email@gmail.com" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-200 outline-none">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-slate-400 font-medium">Mot de passe</label>
+                        <button type="button" onclick="switchAuthView('forgot')" class="text-indigo-400 hover:underline text-[11px]">Oublié ?</button>
+                    </div>
+                    <input type="password" id="signinPassword" required placeholder="••••••••" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-200 outline-none">
+                </div>
+                <button type="submit" id="btnSubmitSignin" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition shadow-lg shadow-indigo-600/20">
+                    Se connecter
+                </button>
+                <div class="text-center text-slate-400 pt-2 text-[11px]">
+                    Pas encore de compte ? <button type="button" onclick="switchAuthView('signup')" class="text-indigo-400 hover:underline font-semibold">Créer un compte (5 req/j)</button>
+                </div>
+            </form>
+
+            <!-- Formulaire Inscription -->
+            <form id="formSignup" class="hidden space-y-3 text-xs">
+                <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5 text-[11px] text-blue-300">
+                    <i class="fa-solid fa-shield-halved mr-1"></i> Domaines officiels : <strong class="text-white">@gmail, @hotmail, @yahoo, @outlook, @icloud</strong>.
+                </div>
+
+                <!-- Phase 1 : Saisie Email & Mot de passe -->
+                <div id="signupStep1" class="space-y-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Adresse Email Officielle</label>
+                        <input type="email" id="signupEmail" required placeholder="nom@gmail.com" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Mot de passe (min. 6 caractères)</label>
+                        <input type="password" id="signupPassword" minlength="6" required placeholder="••••••••" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 outline-none">
+                    </div>
+                    <button type="button" onclick="handleSendSignupOtp()" id="btnSendSignupOtp" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition shadow-lg shadow-indigo-600/20">
+                        Recevoir le code de vérification
+                    </button>
+                </div>
+
+                <!-- Phase 2 : Validation stricte du Code OTP -->
+                <div id="signupStep2" class="space-y-3 hidden">
+                    <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 text-[11px] text-emerald-300">
+                        <i class="fa-solid fa-envelope mr-1"></i> Un code à 6 chiffres vous a été envoyé par email.
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Code OTP (6 chiffres)</label>
+                        <input type="text" id="signupOtpCode" maxlength="6" required placeholder="000000" class="w-full input-bg rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-widest text-white border border-indigo-500/60 focus:border-indigo-400 outline-none">
+                    </div>
+                    <button type="submit" id="btnConfirmSignup" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition shadow-lg shadow-emerald-600/20">
+                        Confirmer et créer mon compte
+                    </button>
+                    <button type="button" onclick="toggleSignupStep(1)" class="w-full text-center text-slate-400 hover:text-white text-[11px] pt-1">
+                        &larr; Modifier l'adresse email
+                    </button>
+                </div>
+
+                <div class="text-center text-slate-400 pt-1 text-[11px]">
+                    Déjà inscrit ? <button type="button" onclick="switchAuthView('signin')" class="text-indigo-400 hover:underline font-semibold">Se connecter</button>
+                </div>
+            </form>
+
+            <!-- Formulaire Mot de Passe Oublié -->
+            <form id="formForgot" class="hidden space-y-3.5 text-xs">
+                <!-- Étape 1 : Demande de code -->
+                <div id="forgotStep1" class="space-y-3">
+                    <p class="text-slate-400 text-[11px] leading-relaxed">
+                        Saisissez votre email pour recevoir un code à 6 chiffres par email.
+                    </p>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Adresse Email</label>
+                        <input type="email" id="forgotEmail" required placeholder="votre.email@gmail.com" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 outline-none">
+                    </div>
+                    <button type="button" onclick="handleSendForgotOtp()" id="btnSendForgotOtp" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition shadow-lg shadow-indigo-600/20">
+                        Recevoir mon code par email
+                    </button>
+                </div>
+
+                <!-- Étape 2 : Code reçu par email + Nouveau mot de passe -->
+                <div id="forgotStep2" class="space-y-3 hidden">
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5 text-[11px] text-blue-300">
+                        <i class="fa-solid fa-envelope mr-1"></i> Consultez votre boîte mail pour récupérer le code à 6 chiffres.
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Code reçu par email</label>
+                        <input type="text" id="forgotOtpCode" maxlength="6" required placeholder="000000" class="w-full input-bg rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-widest text-white border border-indigo-500/60 focus:border-indigo-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Nouveau mot de passe (min. 6 car.)</label>
+                        <input type="password" id="forgotNewPassword" minlength="6" required placeholder="••••••••" class="w-full input-bg rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 outline-none">
+                    </div>
+                    <button type="button" onclick="handleConfirmForgotOtp()" id="btnConfirmForgot" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition shadow-lg shadow-emerald-600/20">
+                        Valider et changer le mot de passe
+                    </button>
+                    <button type="button" onclick="document.getElementById('forgotStep1').classList.remove('hidden'); document.getElementById('forgotStep2').classList.add('hidden');" class="w-full text-center text-slate-400 hover:text-white text-[11px] pt-1">
+                        &larr; Changer d'email
+                    </button>
+                </div>
+
+                <div class="text-center text-slate-400 pt-1 text-[11px]">
+                    <button type="button" onclick="switchAuthView('signin')" class="text-indigo-400 hover:underline font-medium">&larr; Retour à la connexion</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALE GESTION DU COMPTE & LIAISON DE CLÉ API -->
+    <div id="accountModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+        <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-sm">
+                        <i class="fa-solid fa-id-badge"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Mon Espace BrixHub</h3>
+                </div>
+                <button onclick="closeAccountModal()" class="text-slate-500 hover:text-white text-lg">✕</button>
+            </div>
+
+            <div class=\"bg-[#0b0f19] text-slate-100 focus:bg-[#0f172a]/80 p-4 rounded-xl border border-slate-800 space-y-2 text-xs\">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Email :</span>
+                    <span id="accEmail" class="font-mono text-white font-semibold"></span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Forfait actif :</span>
+                    <span id="accPlanBadge" class="font-mono text-blue-400 font-bold uppercase"></span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Accès au site :</span>
+                    <span id="accAccessBadge" class="text-emerald-400 font-semibold"></span>
+                </div>
+            </div>
+
+            <!-- Bloc Liaison Clé API pour Illimité -->
+            <div class="border border-indigo-500/30 bg-indigo-950/20 rounded-xl p-4 space-y-3">
+                <div class="flex items-center gap-2 text-white font-semibold text-xs">
+                    <i class="fa-solid fa-key text-indigo-400"></i>
+                    <span>Activer l'accès illimité avec une Clé API</span>
+                </div>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                    Vous avez acheté une clé Standard (20€) ou Pro (35€) sur Telegram ? Collez-la ci-dessous pour lier votre compte et supprimer toute restriction.
+                </p>
+                <form id="formLinkApiKey" class="space-y-2">
+                    <input type="text" id="inputApiKey" required placeholder="brx_live_sk_..." class="w-full input-bg rounded-xl px-4 py-2.5 font-mono text-xs text-slate-100 placeholder-slate-500 border border-[#243048] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-200 outline-none">
+                    <button type="submit" id="btnLinkKey" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition">
+                        Lier cette clé et débloquer l'illimité
+                    </button>
+                </form>
+            </div>
+
+            <div class="flex justify-between items-center pt-2">
+                <button onclick="handleLogout()" class="text-xs text-red-400 hover:text-red-300 font-medium">
+                    <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i>Déconnexion
+                </button>
+                <button onclick="closeAccountModal()" class="px-4 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-medium">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Mobile First -->
+    <footer class="w-full border-t border-slate-800/80 bg-surface/40 backdrop-blur py-6 mt-12 text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div class="flex items-center gap-2">
+                <div class="w-5 h-5 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-[10px]">B</div>
+                <span>&copy; 2026 BrixHub OSINT</span>
+            </div>
+            <div class="flex flex-wrap justify-center gap-4 text-[11px]">
+                <a href="/api-docs" class="text-slate-400 hover:text-white">API & Tarifs</a>
+                <a href="/cgu" class="hover:text-slate-400">CGU</a>
+                <a href="/rgpd" class="hover:text-slate-400">RGPD</a>
+                <a href="https://t.me/leakfrench" target="_blank" class="text-blue-400">Telegram</a>
+            </div>
+        </div>
+    </footer>
+
+    
+    <script>
+        // --- ATTACHEMENT GLOBAL WINDOW DES FONCTIONS OTP ---
+        window.otpSignupPendingEmail = '';
+        window.otpForgotPendingEmail = '';
+
+        window.toggleSignupStep = function(step) {
+            if (typeof hideAuthAlert === 'function') hideAuthAlert();
+            const s1 = document.getElementById('signupStep1');
+            const s2 = document.getElementById('signupStep2');
+            if (step === 1) {
+                if (s1) s1.classList.remove('hidden');
+                if (s2) s2.classList.add('hidden');
+            } else {
+                if (s1) s1.classList.add('hidden');
+                if (s2) s2.classList.remove('hidden');
+            }
+        };
+
+        window.handleSendSignupOtp = async function() {
+            if (typeof hideAuthAlert === 'function') hideAuthAlert();
+            const emailEl = document.getElementById('signupEmail');
+            const pwdEl = document.getElementById('signupPassword');
+            const btn = document.getElementById('btnSendSignupOtp');
+
+            const email = emailEl ? emailEl.value.trim() : '';
+            const password = pwdEl ? pwdEl.value : '';
+
+            if (!email || password.length < 6) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Veuillez saisir un email valide et un mot de passe d'au moins 6 caractères.");
+                return;
+            }
+
+            if (btn) { btn.disabled = true; btn.innerText = "Envoi du code..."; }
+
+            try {
+                const res = await fetch('/auth/signup/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    window.otpSignupPendingEmail = email;
+                    window.toggleSignupStep(2);
+                    if (typeof showAuthAlert === 'function') showAuthAlert("Code à 6 chiffres envoyé par email !", false);
+                } else {
+                    if (typeof showAuthAlert === 'function') showAuthAlert(data.detail || "Erreur envoi OTP.");
+                }
+            } catch (err) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Erreur réseau.");
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = "Recevoir le code de vérification"; }
+            }
+        };
+
+        window.handleSendForgotOtp = async function() {
+            if (typeof hideAuthAlert === 'function') hideAuthAlert();
+            const emailEl = document.getElementById('forgotEmail');
+            const btn = document.getElementById('btnSendForgotOtp');
+            const email = emailEl ? emailEl.value.trim() : '';
+
+            if (!email) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Veuillez renseigner votre adresse email.");
+                return;
+            }
+
+            if (btn) { btn.disabled = true; btn.innerText = "Envoi en cours..."; }
+
+            try {
+                const res = await fetch('/auth/forgot-password/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                window.otpForgotPendingEmail = email;
+
+                const step1 = document.getElementById('forgotStep1');
+                const step2 = document.getElementById('forgotStep2');
+                if (step1) step1.classList.add('hidden');
+                if (step2) step2.classList.remove('hidden');
+
+                if (typeof showAuthAlert === 'function') showAuthAlert(data.message || "Code expédié par email !", false);
+            } catch (err) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Erreur réseau.");
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = "Recevoir mon code par email"; }
+            }
+        };
+
+        window.handleConfirmForgotOtp = async function() {
+            if (typeof hideAuthAlert === 'function') hideAuthAlert();
+            const otpEl = document.getElementById('forgotOtpCode');
+            const pwdEl = document.getElementById('forgotNewPassword');
+            const btn = document.getElementById('btnConfirmForgot');
+
+            const otp = otpEl ? otpEl.value.trim() : '';
+            const new_password = pwdEl ? pwdEl.value : '';
+
+            if (otp.length !== 6 || new_password.length < 6) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Code à 6 chiffres et mot de passe de min. 6 caractères requis.");
+                return;
+            }
+
+            if (btn) { btn.disabled = true; btn.innerText = "Mise à jour..."; }
+
+            try {
+                const res = await fetch('/auth/forgot-password/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: window.otpForgotPendingEmail, otp, new_password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    if (typeof showAuthAlert === 'function') showAuthAlert("Mot de passe mis à jour ! Redirection...", false);
+                    setTimeout(() => {
+                        const s1 = document.getElementById('forgotStep1');
+                        const s2 = document.getElementById('forgotStep2');
+                        if (s1) s1.classList.remove('hidden');
+                        if (s2) s2.classList.add('hidden');
+                        if (typeof switchAuthView === 'function') switchAuthView('signin');
+                    }, 1500);
+                } else {
+                    if (typeof showAuthAlert === 'function') showAuthAlert(data.detail || "Code OTP incorrect.");
+                }
+            } catch (err) {
+                if (typeof showAuthAlert === 'function') showAuthAlert("Erreur réseau.");
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = "Valider et changer le mot de passe"; }
+            }
+        };
+    
+        let currentResults = [];
+        let currentUser = null;
+
+        // --- GESTION DE SESSION ET QUOTAS UTILISATEUR ---
+        async function checkAuthSession() {
+            try {
+                const savedTok = localStorage.getItem('auth_token') || '';
+                const res = await fetch('/auth/me', {
+                    headers: { 'x-auth-session': savedTok }
+                });
+                const data = await res.json();
+                currentUser = data.logged_in ? data : null;
+                updateAuthUI();
+            } catch (e) {
+                currentUser = null;
+                updateAuthUI();
+            }
+        }
+
+        function updateAuthUI() {
+            const btnAuth = document.getElementById('btnOpenAuth');
+            const userBlock = document.getElementById('userLoggedInBlock');
+            const quotaText = document.getElementById('quotaText');
+
+            if (currentUser && currentUser.logged_in) {
+                btnAuth.classList.add('hidden');
+                userBlock.classList.remove('hidden');
+                document.getElementById('headerUserEmail').innerText = currentUser.email;
+                document.getElementById('headerUserPlan').innerText = currentUser.plan;
+
+                if (['starter', 'pro', 'enterprise', 'paid'].includes(currentUser.plan)) {
+                    quotaText.innerHTML = '<span class="text-emerald-400 font-bold">Illimité (Plan Actif)</span>';
+                } else {
+                    quotaText.innerHTML = 'Membre Gratuit : <span class="text-blue-400 font-bold">5 req / jour</span>';
+                }
+            } else {
+                btnAuth.classList.remove('hidden');
+                userBlock.classList.add('hidden');
+                quotaText.innerHTML = 'Visiteur : <span class="text-amber-400 font-bold">2 req / jour</span>';
+            }
+        }
+
+        function openAuthModal(view = 'signin') {
+            hideAuthAlert();
+            switchAuthView(view);
+            document.getElementById('authModal').classList.remove('hidden');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+
+        function openAccountModal() {
+            if (!currentUser) return;
+            document.getElementById('accEmail').innerText = currentUser.email;
+            document.getElementById('accPlanBadge').innerText = currentUser.plan;
+            
+            const isUnlimited = ['starter', 'pro', 'enterprise', 'paid'].includes(currentUser.plan);
+            document.getElementById('accAccessBadge').innerText = isUnlimited ? 'Illimité (Clé liée)' : '5 requêtes / jour';
+            document.getElementById('accAccessBadge').className = isUnlimited ? 'text-emerald-400 font-bold' : 'text-blue-400 font-semibold';
+
+            document.getElementById('accountModal').classList.remove('hidden');
+        }
+
+        function closeAccountModal() {
+            document.getElementById('accountModal').classList.add('hidden');
+        }
+
+        function switchAuthView(view) {
+            hideAuthAlert();
+            const fSignin = document.getElementById('formSignin');
+            const fSignup = document.getElementById('formSignup');
+            const fForgot = document.getElementById('formForgot');
+            const title = document.getElementById('authModalTitle');
+
+            fSignin.classList.add('hidden');
+            fSignup.classList.add('hidden');
+            fForgot.classList.add('hidden');
+
+            if (view === 'signin') {
+                title.innerText = 'Connexion Espace Membre';
+                fSignin.classList.remove('hidden');
+            } else if (view === 'signup') {
+                title.innerText = 'Inscription Gratuite';
+                fSignup.classList.remove('hidden');
+            } else if (view === 'forgot') {
+                title.innerText = 'Réinitialisation Mot de passe';
+                fForgot.classList.remove('hidden');
+            }
+        }
+
+        function showAuthAlert(msg, isError = true) {
+            const el = document.getElementById('authAlert');
+            el.className = `text-xs p-3 rounded-xl border flex items-center gap-2 font-medium ${isError ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`;
+            el.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i> <span>${msg}</span>`;
+            el.classList.remove('hidden');
+        }
+
+        function hideAuthAlert() {
+            document.getElementById('authAlert').classList.add('hidden');
+        }
+
+        // 1. Soumission Connexion
+        document.getElementById('formSignin').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signinEmail').value.trim();
+            const password = document.getElementById('signinPassword').value;
+            const btn = document.getElementById('btnSubmitSignin');
+
+            btn.disabled = true;
+            btn.innerText = 'Connexion...';
+            try {
+                const res = await fetch('/auth/signin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    if (data.token) localStorage.setItem('auth_token', data.token);
+                    closeAuthModal();
+                    await checkAuthSession();
+                } else {
+                    showAuthAlert(data.detail || 'Identifiants invalides');
+                }
+            } catch (err) {
+                showAuthAlert('Erreur réseau');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Se connecter';
+            }
+        });
+
+        // 2. Soumission Inscription
+                const formSignupEl = document.getElementById('formSignup');
+        if (formSignupEl) {
+            formSignupEl.onsubmit = async (e) => {
+                e.preventDefault();
+                if (typeof hideAuthAlert === 'function') hideAuthAlert();
+                
+                const otpEl = document.getElementById('signupOtpCode');
+                const btn = document.getElementById('btnConfirmSignup') || document.getElementById('btnSubmitSignup');
+
+                const otp = otpEl ? otpEl.value.trim() : '';
+
+                if (otp.length !== 6) {
+                    if (typeof showAuthAlert === 'function') showAuthAlert("Le code OTP doit comporter exactement 6 chiffres.");
+                    return;
+                }
+
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerText = "Validation du compte...";
+                }
+
+                const emailToSend = window.otpSignupPendingEmail || (document.getElementById('signupEmail') ? document.getElementById('signupEmail').value.trim() : '');
+
+                try {
+                    const res = await fetch('/auth/signup/verify-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: emailToSend, otp: otp })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        if (typeof showAuthAlert === 'function') showAuthAlert("Compte validé avec succès ! Connexion en cours...", false);
+                        setTimeout(() => {
+                            if (typeof toggleSignupStep === 'function') toggleSignupStep(1);
+                            if (typeof switchAuthView === 'function') switchAuthView('signin');
+                        }, 1400);
+                    } else {
+                        if (typeof showAuthAlert === 'function') showAuthAlert(data.detail || "Code OTP incorrect ou expiré.");
+                    }
+                } catch (err) {
+                    if (typeof showAuthAlert === 'function') showAuthAlert("Erreur réseau lors de la validation.");
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "Confirmer et créer mon compte";
+                    }
+                }
+            };
+        }
+
+        // 3. Soumission Mot de passe oublié
+        
+
+        // 4. Lier une Clé API
+        document.getElementById('formLinkApiKey').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const apiKey = document.getElementById('inputApiKey').value.trim();
+            const btn = document.getElementById('btnLinkKey');
+
+            btn.disabled = true;
+            btn.innerText = 'Vérification de la clé...';
+            try {
+                const res = await fetch('/auth/link-key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message);
+                    closeAccountModal();
+                    await checkAuthSession();
+                } else {
+                    alert(data.detail || 'Clé invalide ou inactive');
+                }
+            } catch (err) {
+                alert('Erreur réseau');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Lier cette clé et débloquer l\'illimité';
+            }
+        });
+
+        // 5. Déconnexion
+        async function handleLogout() {
+            localStorage.removeItem('auth_token');
+            await fetch('/auth/logout', { method: 'POST' });
+            currentUser = null;
+            closeAccountModal();
+            updateAuthUI();
+        }
+
+        // --- BANDEAU RGPD ---
+        function dismissRemovalBanner() {
+            const el = document.getElementById('gdprRemovalBanner');
+            if (el) {
+                el.style.display = 'none';
+                sessionStorage.setItem('hide_removal_banner', 'true');
+            }
+        }
+        if (sessionStorage.getItem('hide_removal_banner') === 'true') {
+            const el = document.getElementById('gdprRemovalBanner');
+            if (el) el.style.display = 'none';
+        }
+
+        // --- ONLINE TRACKER & STATS ---
+        function initOnlineTracker() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/online`;
+            let socket;
+            function connect() {
+                socket = new WebSocket(wsUrl);
+                socket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.online_users !== undefined) {
+                            const badge = document.getElementById('badgeOnlineCount');
+                            if (badge) badge.textContent = data.online_users;
+                        }
+                    } catch (err) {}
+                };
+                socket.onclose = () => setTimeout(connect, 3000);
+                socket.onerror = () => socket.close();
+            }
+            connect();
+        }
+        initOnlineTracker();
+
+        function toggleStatsPopup(event) {
+            event.stopPropagation();
+            document.getElementById('statsPopover').classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            const container = document.getElementById('statsContainer');
+            const popover = document.getElementById('statsPopover');
+            if (popover && !container.contains(e.target)) popover.classList.add('hidden');
+        });
+
+        const KNOWN_COLORS = {
+            'free': { bg: 'rgba(239, 68, 68, 0.2)', text: '#fca5a5', border: '#ef4444' },
+            'freefr': { bg: 'rgba(239, 68, 68, 0.2)', text: '#fca5a5', border: '#ef4444' },
+            'mephistopheles': { bg: 'rgba(16, 185, 129, 0.2)', text: '#6ee7b7', border: '#10b981' },
+            'colisprive': { bg: 'rgba(245, 158, 11, 0.2)', text: '#fcd34d', border: '#f59e0b' },
+            'bouygues': { bg: 'rgba(6, 182, 212, 0.2)', text: '#67e8f9', border: '#06b6d4' },
+            'sfr': { bg: 'rgba(249, 115, 22, 0.2)', text: '#fdba74', border: '#f97316' },
+            'orange': { bg: 'rgba(245, 158, 11, 0.2)', text: '#fcd34d', border: '#f59e0b' }
+        };
+
+        function getBadgeStyle(sourceName) {
+            if (!sourceName) return "background-color: #1f2937; color: #9ca3af; border: 1px solid #374151;";
+            const key = sourceName.trim().toLowerCase();
+            if (KNOWN_COLORS[key]) {
+                const c = KNOWN_COLORS[key];
+                return `background-color: ${c.bg}; color: ${c.text}; border: 1px solid ${c.border};`;
+            }
+            let hash = 0;
+            for (let i = 0; i < sourceName.length; i++) hash = sourceName.charCodeAt(i) + ((hash << 5) - hash);
+            const hue = Math.abs(hash * 137) % 360;
+            return `background-color: hsla(${hue}, 75%, 50%, 0.18); color: hsl(${hue}, 85%, 75%); border: 1px solid hsl(${hue}, 70%, 45%);`;
+        }
+
+        async function loadSourcesAndStats() {
+            try {
+                const resSrc = await fetch('/api/sources');
+                const sources = await resSrc.json();
+                const sel = document.getElementById('source');
+                sources.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.textContent = s;
+                    sel.appendChild(opt);
+                });
+
+                const resStats = await fetch('/api/stats');
+                const stats = await resStats.json();
+
+                const formattedTotal = Number(stats.total).toLocaleString('fr-FR');
+                document.getElementById('badgeTotalRecords').textContent = formattedTotal;
+                document.getElementById('popoverTotal').textContent = `${formattedTotal} lignes`;
+
+                const listContainer = document.getElementById('sourcesStatsList');
+                listContainer.innerHTML = '';
+
+                stats.by_source.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between py-1 border-b border-gray-800/60 last:border-0";
+                    const badgeStyle = getBadgeStyle(item.source);
+                    row.innerHTML = `
+                        <span style="${badgeStyle}" class="px-2 py-0.5 rounded text-[10px] font-mono">${item.source}</span>
+                        <span class="font-mono text-gray-300 font-medium">${Number(item.count).toLocaleString('fr-FR')}</span>
+                    `;
+                    listContainer.appendChild(row);
+                });
+            } catch (err) {
+                document.getElementById('badgeTotalRecords').textContent = "Erreur";
+            }
+        }
+        loadSourcesAndStats();
+
+        function clearFields() {
+            ['q', 'nom', 'prenom', 'date_naissance', 'jour', 'mois', 'annee', 'code_postal', 'ville', 'tel', 'mail'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('source').value = 'ALL';
+            document.getElementById('resultsWrapper').classList.add('hidden');
+        }
+
+                                                        async function runSearch() {
+            const params = new URLSearchParams();
+            ['q', 'nom', 'prenom', 'date_naissance', 'jour', 'mois', 'annee', 'code_postal', 'ville', 'tel', 'mail'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.value && el.value.trim()) params.append(id, el.value.trim());
+            });
+            const srcEl = document.getElementById('source');
+            if (srcEl && srcEl.value && srcEl.value !== 'ALL') params.append('source', srcEl.value);
+
+            const banner = document.getElementById('quotaExceededBanner');
+            if (banner) banner.style.display = 'none';
+
+            if (!params.toString()) {
+                alert("Veuillez renseigner au moins un critère de recherche.");
+                return;
+            }
+
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) loadingEl.classList.remove('hidden');
+
+            const token = localStorage.getItem('auth_token') || '';
+
+            try {
+                const res = await fetch(`/api/search?${params.toString()}`, {
+                    credentials: "include",
+                    headers: { 'x-auth-session': token }
+                });
+
+                if (res.status === 429) {
+                    if (loadingEl) loadingEl.classList.add('hidden');
+                    
+                    // Masquer les résultats pour bloquer complètement l'affichage
+                    const resWrapper = document.getElementById('resultsWrapper');
+                    if (resWrapper) resWrapper.classList.add('hidden');
+
+                    let errDetail = '';
+                    try {
+                        const errData = await res.json();
+                        errDetail = errData.detail || '';
+                    } catch (e) {}
+
+                    const bTitle = document.getElementById('quotaBannerTitle');
+                    const bDesc = document.getElementById('quotaBannerDesc');
+                    const bActions = document.getElementById('quotaBannerActions');
+
+                    const isGuest = errDetail === 'QUOTA_EXCEEDED_GUEST' || !currentUser || !currentUser.logged_in;
+
+                    if (banner) {
+                        if (isGuest) {
+                            if (bTitle) bTitle.innerText = "Quota invité épuisé (2 requêtes max / jour)";
+                            if (bDesc) bDesc.innerText = "Vous avez utilisé vos 2 recherches gratuites en mode invité. Créez un compte gratuit pour passer à 5 requêtes par jour ou liez une clé API pour un accès illimité.";
+                            if (bActions) bActions.innerHTML = `
+                                <button type="button" onclick="openAuthModal('signup')" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 whitespace-nowrap">
+                                    <i class="fa-solid fa-user-plus mr-1"></i> Créer un compte gratuit (5 req/j)
+                                </button>
+                                <button type="button" onclick="document.getElementById('quotaExceededBanner').style.display='none'" class="p-2 text-slate-400 hover:text-white rounded-lg transition"><i class="fa-solid fa-xmark"></i></button>`;
+                        } else {
+                            if (bTitle) bTitle.innerText = "Vos 5 requêtes quotidiennes sont épuisées";
+                            if (bDesc) bDesc.innerText = "Votre quota gratuit se réinitialisera à minuit. Pour continuer vos recherches dès maintenant sans limite, associez une clé API active.";
+                            if (bActions) bActions.innerHTML = `
+                                <button type="button" onclick="openAccountModal()" class="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-500/20 whitespace-nowrap">
+                                    <i class="fa-solid fa-key mr-1.5"></i> Lier une clé API (Illimité)
+                                </button>
+                                <button type="button" onclick="document.getElementById('quotaExceededBanner').style.display='none'" class="p-2 text-slate-400 hover:text-white rounded-lg transition"><i class="fa-solid fa-xmark"></i></button>`;
+                        }
+                        banner.style.display = 'block';
+                        banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return;
+                }
+
+                if (res.status === 403) {
+                    if (loadingEl) loadingEl.classList.add('hidden');
+                    alert("Compte suspendu ou accès non autorisé.");
+                    return;
+                }
+
+                if (!res.ok) {
+                    if (loadingEl) loadingEl.classList.add('hidden');
+                    return;
+                }
+
+                const data = await res.json();
+                currentResults = data;
+                if (typeof renderResults === 'function') renderResults(data);
+            } catch (err) {
+                console.error("Erreur search:", err);
+            } finally {
+                if (loadingEl) loadingEl.classList.add('hidden');
+            }
+        }
+
+        function renderResults(data) {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            document.getElementById('count').textContent = data.length;
+            document.getElementById('resultsWrapper').classList.remove('hidden');
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">Aucun résultat trouvé.</td></tr>`;
+                return;
+            }
+
+            data.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-indigo-950/30 transition cursor-pointer group";
+                tr.onclick = () => openModal(index);
+
+                let dDisplay = item['Date de naissance'];
+                if (!dDisplay && item['annee de naissance']) {
+                    dDisplay = `${item['jour de naissance'] || '??'}/${item['mois de naissance'] || '??'}/${item['annee de naissance']}`;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-2.5 sm:p-3">
+                        <span style="${getBadgeStyle(item.source)}" class="px-2 py-0.5 rounded text-[10px] font-mono">
+                            ${item.source || '-'}
+                        </span>
+                    </td>
+                    <td class="p-2.5 sm:p-3 font-semibold text-white group-hover:text-indigo-300 transition">${item.Nom || ''} ${item.Prenom || ''}</td>
+                    <td class="p-2.5 sm:p-3 font-mono">${dDisplay || '-'}</td>
+                    <td class="p-2.5 sm:p-3 font-mono text-emerald-400">${item['numero de tel'] || '-'}</td>
+                    <td class="p-2.5 sm:p-3 text-gray-400">${item.mail || '-'}</td>
+                    <td class="p-2.5 sm:p-3">${item.adresse || ''} ${item.ville ? '(' + item.ville + ')' : ''}</td>
+                    <td class="p-2.5 sm:p-3 font-mono text-yellow-500/90">${item.iban || '-'}</td>
+                    <td class="p-2.5 sm:p-3 font-mono text-gray-300">${item.bic || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function switchModalTab(tab) {
+            ['Matches', 'Family', 'Raw'].forEach(t => {
+                document.getElementById(`tabContent${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tabBtn${t}`);
+                btn.classList.remove('border-indigo-500', 'text-indigo-400');
+                btn.classList.add('border-transparent', 'text-gray-400');
+            });
+
+            if (tab === 'matches') {
+                document.getElementById('tabContentMatches').classList.remove('hidden');
+                document.getElementById('tabBtnMatches').classList.add('border-indigo-500', 'text-indigo-400');
+            } else if (tab === 'family') {
+                document.getElementById('tabContentFamily').classList.remove('hidden');
+                document.getElementById('tabBtnFamily').classList.add('border-indigo-500', 'text-indigo-400');
+            } else {
+                document.getElementById('tabContentRaw').classList.remove('hidden');
+                document.getElementById('tabBtnRaw').classList.add('border-indigo-500', 'text-indigo-400');
+            }
+        }
+
+        function getScoreBadge(score) {
+            if (score >= 80) return `<span class="bg-emerald-950/80 border border-emerald-500 text-emerald-300 font-bold px-1.5 py-0.5 rounded text-[10px] font-mono">${score}% Fiable</span>`;
+            if (score >= 60) return `<span class="bg-amber-950/80 border border-amber-500 text-amber-300 font-bold px-1.5 py-0.5 rounded text-[10px] font-mono">${score}% Élevé</span>`;
+            return `<span class="bg-blue-950/80 border border-blue-500 text-blue-300 font-bold px-1.5 py-0.5 rounded text-[10px] font-mono">${score}% Piste</span>`;
+        }
+
+        async function openModal(target) {
+            let record = typeof target === 'number' ? currentResults[target] : target;
+            if (!record) return;
+
+            document.getElementById('modalTitle').textContent = `${record.Nom || ''} ${record.Prenom || ''}`.trim() || "Fiche";
+            document.getElementById('modalSubtitle').textContent = `Source : ${record.source || 'Inconnue'}`;
+            document.getElementById('modalJsonContent').textContent = JSON.stringify(record, null, 2);
+
+            switchModalTab('matches');
+            document.getElementById('modalOverlay').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            document.getElementById('matchesLoading').classList.remove('hidden');
+            document.getElementById('matchesList').classList.add('hidden');
+            document.getElementById('badgeMatchesCount').textContent = "...";
+            document.getElementById('badgeFamilyCount').textContent = "...";
+
+            const params = new URLSearchParams({
+                nom: record.Nom || '',
+                prenom: record.Prenom || '',
+                date_naissance: record['Date de naissance'] || '',
+                tel: record['numero de tel'] || '',
+                mail: record.mail || '',
+                code_postal: record['code postal'] || '',
+                adresse: record.adresse || '',
+                source: record.source || ''
+            });
+
+            try {
+                const res = await fetch(`/api/correlations?${params.toString()}`);
+                const data = await res.json();
+                renderCorrelations(data.matches || [], data.foyer || data.family || []);
+            } catch (err) {
+                document.getElementById('matchesLoading').textContent = "Erreur d'analyse";
+            }
+        }
+
+        function renderCorrelations(matches, family) {
+            document.getElementById('matchesLoading').classList.add('hidden');
+            document.getElementById('matchesList').classList.remove('hidden');
+            document.getElementById('badgeMatchesCount').textContent = matches.length;
+            document.getElementById('badgeFamilyCount').textContent = family.length;
+
+            const mList = document.getElementById('matchesList');
+            mList.innerHTML = matches.length === 0 ? '<div class="text-center py-4 text-gray-500 text-xs">Aucune correspondance.</div>' : '';
+            matches.forEach(m => {
+                const d = m.data;
+                const card = document.createElement('div');
+                card.className = "p-2.5 rounded-lg bg-[#0e1626] border border-gray-800 hover:border-indigo-400 cursor-pointer";
+                card.onclick = () => openModal(d);
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span style="${getBadgeStyle(d.source)}" class="px-1.5 py-0.5 rounded text-[9px] font-mono">${d.source}</span>
+                            <span class="font-bold text-white text-xs">${d.Nom || ''} ${d.Prenom || ''}</span>
+                        </div>
+                        <div>${getScoreBadge(m.score)}</div>
+                    </div>
+                    <div class="text-[11px] text-gray-400 grid grid-cols-1 sm:grid-cols-2 gap-0.5">
+                        <div>📞 <span class="text-emerald-400 font-mono">${d['numero de tel'] || '-'}</span></div>
+                        <div>✉️ <span class="text-indigo-300">${d.mail || '-'}</span></div>
+                        <div class="sm:col-span-2">🏠 ${d.adresse || '-'} (${d.ville || ''})</div>
+                    </div>
+                `;
+                mList.appendChild(card);
+            });
+
+            const fList = document.getElementById('familyList');
+            fList.innerHTML = family.length === 0 ? '<div class="text-center py-4 text-gray-500 text-xs">Aucun membre du foyer trouvé.</div>' : '';
+            family.forEach(f => {
+                const d = f.data;
+                const card = document.createElement('div');
+                card.className = "p-2.5 rounded-lg bg-[#0e1626] border border-gray-800 hover:border-emerald-400 cursor-pointer";
+                card.onclick = () => openModal(d);
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span style="${getBadgeStyle(d.source)}" class="px-1.5 py-0.5 rounded text-[9px] font-mono">${d.source}</span>
+                            <span class="font-bold text-white text-xs">${d.Nom || ''} ${d.Prenom || ''}</span>
+                        </div>
+                        <div>${getScoreBadge(f.score)}</div>
+                    </div>
+                    <div class="text-[11px] text-gray-400">
+                        <div>📞 <span class="text-emerald-400 font-mono">${d['numero de tel'] || '-'}</span></div>
+                        <div>🏠 ${d.adresse || '-'}</div>
+                    </div>
+                `;
+                fList.appendChild(card);
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function copyModalJson() {
+            const text = document.getElementById('modalJsonContent').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('btnCopyJson');
+                btn.textContent = "Copié !";
+                setTimeout(() => btn.textContent = "Copier", 1500);
+            });
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'modalOverlay') closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeAuthModal();
+                closeAccountModal();
+            }
+            if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('hidden') && document.getElementById('authModal').classList.contains('hidden')) runSearch();
+        });
+
+        // Initialisation de la session au chargement
+        checkAuthSession();
+    </script>
+<script src="/static/track-click.js"></script>
+</body>
+</html>

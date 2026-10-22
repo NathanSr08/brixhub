@@ -1,7 +1,16 @@
 from typing import Optional
 from starlette.concurrency import run_in_threadpool
 from app.repositories import membres_repo
+import hashlib
+
 from app.core.normalizer import normalize_name, normalize_phone, get_name_variants
+
+
+def profile_ref(nom, prenom, date_naissance, code_postal, source) -> str:
+    """Identifiant deterministe d'une fiche (stable entre deux recherches)."""
+    raw = "|".join(str(x or "").strip().upper()
+                   for x in (nom, prenom, date_naissance, code_postal, source))
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
 
 def _build_conditions(**f) -> tuple[list[str], dict]:
     conditions, params = [], {}
@@ -123,7 +132,14 @@ class SearchService:
         keys = ["Nom", "Prenom", "Date de naissance", "annee de naissance",
                 "mois de naissance", "jour de naissance", "mail", "code postal",
                 "ville", "adresse", "numero de tel", "iban", "bic", "source"]
-        return [dict(zip(keys, r)) for r in rows]
+        out = []
+        for r in rows:
+            d = dict(zip(keys, r))
+            d["profile_ref"] = profile_ref(d.get("Nom"), d.get("Prenom"),
+                                           d.get("Date de naissance"),
+                                           d.get("code postal"), d.get("source"))
+            out.append(d)
+        return out
 
     async def stats(self) -> dict:
         total, by_source = await run_in_threadpool(

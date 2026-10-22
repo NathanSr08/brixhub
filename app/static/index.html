@@ -128,7 +128,7 @@
         <div class="bg-[#0b1419]/90 border border-emerald-900/60 rounded-xl px-4 py-2.5 shadow-lg flex items-center justify-center text-center">
             <p class="text-xs text-gray-300">
                 Demande de suppression :
-                <a href="https://t.me/leakfrench" target="_blank" rel="noopener noreferrer" class="font-bold text-emerald-400 hover:text-emerald-300 ml-1 underline transition">
+                <a href="https://t.me/leackfrench" target="_blank" rel="noopener noreferrer" class="font-bold text-emerald-400 hover:text-emerald-300 ml-1 underline transition">
                     @leakfrench
                 </a>
             </p>
@@ -170,7 +170,7 @@
                         </div>
                         <p class="text-[11px] text-slate-400 mt-1">Suppression immédiate d'une ligne ou d'un numéro précis.</p>
                     </div>
-                    <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20supprimer%201%20fiche%20(10€)" target="_blank"
+                    <a href="https://t.me/leackfrench?text=Bonjour,%20je%20souhaite%20supprimer%201%20fiche%20(10€)" target="_blank"
                        class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center rounded-lg transition border border-slate-700 block">
                         Supprimer 1 entrée
                     </a>
@@ -190,7 +190,7 @@
                         </div>
                         <p class="text-[11px] text-slate-300 mt-1">Purge intégrale de toutes vos variantes (tél, adresses, emails liés).</p>
                     </div>
-                    <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20le%20Pack%20Identité%20(25€)" target="_blank"
+                    <a href="https://t.me/leackfrench?text=Bonjour,%20je%20souhaite%20le%20Pack%20Identité%20(25€)" target="_blank"
                        class="mt-4 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold text-center rounded-lg transition shadow-md shadow-blue-600/30 block">
                         Nettoyer mon Identité
                     </a>
@@ -209,7 +209,7 @@
                         </div>
                         <p class="text-[11px] text-slate-400 mt-1">Suppression totale + surveillance et blacklistage 6 mois.</p>
                     </div>
-                    <a href="https://t.me/leakfrench?text=Bonjour,%20je%20souhaite%20le%20Pack%20Wipeout%20(49€)" target="_blank"
+                    <a href="https://t.me/leackfrench?text=Bonjour,%20je%20souhaite%20le%20Pack%20Wipeout%20(49€)" target="_blank"
                        class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center rounded-lg transition border border-slate-700 block">
                         Wipeout & Veille 6 Mois
                     </a>
@@ -625,7 +625,7 @@
                 <a href="/api-docs" class="text-slate-400 hover:text-white">API & Tarifs</a>
                 <a href="/cgu" class="hover:text-slate-400">CGU</a>
                 <a href="/rgpd" class="hover:text-slate-400">RGPD</a>
-                <a href="https://t.me/leakfrench" target="_blank" class="text-blue-400">Telegram</a>
+                <a href="https://t.me/leackfrench" target="_blank" class="text-blue-400">Telegram</a>
             </div>
         </div>
     </footer>
@@ -796,12 +796,12 @@
                 if (['starter', 'pro', 'enterprise', 'paid'].includes(currentUser.plan)) {
                     quotaText.innerHTML = '<span class="text-emerald-400 font-bold">Illimité (Plan Actif)</span>';
                 } else {
-                    quotaText.innerHTML = 'Membre Gratuit : <span class="text-blue-400 font-bold">5 req / jour</span>';
+                    quotaText.innerHTML = 'Membre Gratuit : <span class="text-blue-400 font-bold">' + ((window.__bxQ && window.__bxQ.user) || 5) + ' req / jour</span>';
                 }
             } else {
                 btnAuth.classList.remove('hidden');
                 userBlock.classList.add('hidden');
-                quotaText.innerHTML = 'Visiteur : <span class="text-amber-400 font-bold">2 req / jour</span>';
+                quotaText.innerHTML = 'Visiteur : <span class="text-amber-400 font-bold">' + ((window.__bxQ && window.__bxQ.guest) || 2) + ' req / jour</span>';
             }
         }
 
@@ -1382,5 +1382,9 @@
         // Initialisation de la session au chargement
         checkAuthSession();
     </script>
+<script src="/static/track-click.js?v=3"></script>
+<script src="/static/dynamic-config.js?v=10"></script>
+<script src="/static/quota-badge.js?v=1"></script>
+<script src="/static/plan-cta.js?v=10"></script>
 </body>
 </html>

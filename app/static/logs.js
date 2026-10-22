@@ -1,0 +1,336 @@
+/* =====================================================================
+   BrixHub - Onglet "Logs Globaux" auto-injecte dans le panel admin
+   ===================================================================== */
+
+var allLogs = [], logsTotal = 0, logsLive = false, logsTimer = null, logsDebounce = null;
+
+var ACTOR_META = {
+    guest:  { label: 'Guest',   cls: 'bg-slate-700 text-slate-200',                                      icon: 'fa-user-secret' },
+    user:   { label: 'User',    cls: 'bg-emerald-600/20 text-emerald-300 border border-emerald-700/40',   icon: 'fa-user' },
+    api:    { label: 'API',     cls: 'bg-amber-600/20 text-amber-300 border border-amber-700/40',         icon: 'fa-key' },
+    admin:  { label: 'Admin',   cls: 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-700/40',   icon: 'fa-shield-halved' },
+    bot:    { label: 'Bot',     cls: 'bg-sky-600/20 text-sky-300 border border-sky-700/40',               icon: 'fa-robot' },
+    system: { label: 'Systeme', cls: 'bg-slate-600/30 text-slate-300',                                    icon: 'fa-gear' }
+};
+
+function _esc(v) {
+    return String(v === null || v === undefined ? '' : v)
+        .replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+}
+function _ts(v) {
+    if (!v) return '-';
+    var d = new Date(String(v).replace(' ', 'T') + 'Z');
+    return isNaN(d) ? v : d.toLocaleString('fr-FR', { hour12: false });
+}
+function _stCls(s) { return s >= 500 ? 'text-red-400' : s >= 400 ? 'text-amber-400' : s >= 300 ? 'text-slate-300' : 'text-emerald-400'; }
+function _latCls(ms) { return ms >= 1000 ? 'text-red-400' : ms >= 300 ? 'text-amber-400' : 'text-emerald-400'; }
+function _badge(t) {
+    var m = ACTOR_META[t] || ACTOR_META.system;
+    return '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold ' + m.cls + '"><i class="fa-solid ' + m.icon + ' mr-1"></i>' + m.label + '</span>';
+}
+
+var LOGS_SECTION = `
+<div id="tabContentLogs" class="hidden space-y-6">
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5 sm:gap-4">
+    <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5"><div class="text-slate-400 text-[10px] sm:text-xs font-medium">Requetes 24h</div><div id="statLogsTotal" class="text-xl sm:text-2xl font-extrabold text-white mt-0.5">-</div></div>
+    <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5"><div class="text-slate-400 text-[10px] sm:text-xs font-medium">Visiteurs (guest)</div><div id="statLogsGuests" class="text-xl sm:text-2xl font-extrabold text-slate-300 mt-0.5">-</div></div>
+    <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5"><div class="text-slate-400 text-[10px] sm:text-xs font-medium">Utilisateurs</div><div id="statLogsUsers" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-0.5">-</div></div>
+    <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5"><div class="text-slate-400 text-[10px] sm:text-xs font-medium">Appels API</div><div id="statLogsApi" class="text-xl sm:text-2xl font-extrabold text-amber-400 mt-0.5">-</div></div>
+    <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5"><div class="text-slate-400 text-[10px] sm:text-xs font-medium">Erreurs 4xx / 5xx</div><div id="statLogsErrors" class="text-xl sm:text-2xl font-extrabold text-red-400 mt-0.5">-</div></div>
+    <div class="bg-surface border border-slate-800 rounded-xl p-3.5 sm:p-5"><div class="text-slate-400 text-[10px] sm:text-xs font-medium">Latence moy / p95</div><div id="statLogsLatency" class="text-xl sm:text-2xl font-extrabold text-indigo-300 mt-0.5">-</div></div>
+  </div>
+
+  <div class="bg-surface border border-slate-800 rounded-xl p-3 sm:p-4 space-y-3">
+    <div class="flex flex-wrap gap-2 items-center">
+      <input id="logSearch" oninput="debouncedLogs()" placeholder="Rechercher : IP, email, endpoint, request-id, user-agent, erreur..."
+             class="flex-1 min-w-[220px] bg-dark border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-600">
+      <select id="logActorType" onchange="fetchLogs()" class="bg-dark border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300">
+        <option value="all">Tous les acteurs</option><option value="guest">Visiteurs</option><option value="user">Utilisateurs</option>
+        <option value="api">Cles API</option><option value="admin">Admins</option><option value="bot">Bots</option>
+      </select>
+      <select id="logTag" onchange="fetchLogs()" class="bg-dark border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300">
+        <option value="all">Tous les tags</option><option value="search">Recherche</option><option value="correlation">Correlation</option>
+        <option value="api">API v1</option><option value="auth">Auth / OTP</option><option value="admin">Admin</option>
+        <option value="web">Web</option><option value="page">Pages</option><option value="bot">Bot</option>
+      </select>
+      <select id="logStatus" onchange="fetchLogs()" class="bg-dark border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300">
+        <option value="">Tous statuts</option><option value="2">2xx</option><option value="3">3xx</option><option value="4">4xx</option><option value="5">5xx</option>
+      </select>
+      <input id="logIp" onchange="fetchLogs()" placeholder="IP exacte" class="w-36 bg-dark border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500">
+      <input type="datetime-local" id="logFrom" onchange="fetchLogs()" class="bg-dark border border-slate-800 rounded-lg px-2 py-2 text-[11px] text-slate-300">
+      <input type="datetime-local" id="logTo" onchange="fetchLogs()" class="bg-dark border border-slate-800 rounded-lg px-2 py-2 text-[11px] text-slate-300">
+      <input id="logMinLatency" onchange="fetchLogs()" type="number" min="0" placeholder="Latence >= ms" class="w-32 bg-dark border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500">
+      <label class="flex items-center gap-1.5 text-[11px] text-slate-400"><input type="checkbox" id="logErrorsOnly" onchange="fetchLogs()" class="accent-red-500"> Erreurs seules</label>
+      <label class="flex items-center gap-1.5 text-[11px] text-slate-400"><input type="checkbox" id="logIncludePanel" onchange="fetchLogs()" class="accent-emerald-500"> Inclure admin &amp; panel</label>
+      <button onclick="toggleLogsLive()" id="logLiveBtn" class="px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700"><i class="fa-solid fa-circle-play"></i> Live : OFF</button>
+      <button onclick="exportLogs()" class="px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+      <button onclick="resetLogFilters()" class="px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">Reset</button>
+    </div>
+    <div class="text-[10px] text-slate-500 font-mono" id="logsTopIps"></div>
+  </div>
+
+  <div class="bg-surface border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+    <div class="overflow-x-auto custom-scroll">
+      <table class="w-full text-left text-xs text-slate-300 min-w-[1050px]">
+        <thead class="bg-dark/70 text-slate-400 uppercase font-mono border-b border-slate-800 text-[10px]">
+          <tr><th class="px-3 py-3">Heure</th><th class="px-3 py-3">Acteur</th><th class="px-3 py-3">IP</th><th class="px-3 py-3">Meth.</th><th class="px-3 py-3">Endpoint</th><th class="px-3 py-3">Statut</th><th class="px-3 py-3">Latence</th><th class="px-3 py-3">Tag</th><th class="px-3 py-3">User-Agent</th></tr>
+        </thead>
+        <tbody id="logsTableBody" class="divide-y divide-slate-800/60 font-mono text-[11px]"></tbody>
+      </table>
+    </div>
+    <div class="p-3 flex items-center justify-between text-xs text-slate-400 border-t border-slate-800">
+      <span id="logsCountLabel">0 resultat</span>
+      <button onclick="loadMoreLogs()" id="logsMoreBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hidden">Charger plus</button>
+    </div>
+  </div>
+</div>`;
+
+var LOGS_MODALS = `
+<div id="logDetailModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[88vh] overflow-y-auto custom-scroll">
+    <div class="flex items-center justify-between p-4 border-b border-slate-800">
+      <h3 class="text-sm font-bold text-white"><i class="fa-solid fa-magnifying-glass-chart mr-2 text-emerald-400"></i>Detail de la requete</h3>
+      <button onclick="document.getElementById('logDetailModal').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="logDetailBody" class="p-4 space-y-3 text-xs"></div>
+  </div>
+</div>
+<div id="actorModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-surface border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[88vh] overflow-y-auto custom-scroll">
+    <div class="flex items-center justify-between p-4 border-b border-slate-800">
+      <h3 class="text-sm font-bold text-white"><i class="fa-solid fa-id-badge mr-2 text-indigo-400"></i>Profil de l acteur</h3>
+      <button onclick="document.getElementById('actorModal').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="actorBody" class="p-4 space-y-4 text-xs"></div>
+  </div>
+</div>`;
+
+/* ---------------------- navigation ---------------------- */
+window.switchMainTab = function (tab) {
+    var active = { keys: 'bg-blue-600', users: 'bg-indigo-600', logs: 'bg-emerald-600' };
+    ['keys', 'users', 'logs'].forEach(function (t) {
+        var cap = t.charAt(0).toUpperCase() + t.slice(1);
+        var content = document.getElementById('tabContent' + cap);
+        var btn = document.getElementById('tabBtn' + cap);
+        var on = (t === tab);
+        if (content) content.classList.toggle('hidden', !on);
+        if (btn) {
+            btn.classList.toggle('bg-surface', !on);
+            btn.classList.toggle('text-slate-400', !on);
+            btn.classList.toggle('text-white', on);
+            btn.classList.toggle(active[t], on);
+        }
+    });
+    if (tab === 'keys' && typeof fetchKeys === 'function') fetchKeys();
+    if (tab === 'users' && typeof fetchUsers === 'function') fetchUsers();
+    if (tab === 'logs') { fetchLogsStats(); fetchLogs(); }
+};
+
+/* ---------------------- donnees ---------------------- */
+function debouncedLogs() { clearTimeout(logsDebounce); logsDebounce = setTimeout(function () { fetchLogs(); }, 350); }
+
+function logParams(offset) {
+    var p = new URLSearchParams();
+    function put(k, v) { if (v !== '' && v !== null && v !== undefined) p.set(k, v); }
+    put('q', document.getElementById('logSearch').value.trim());
+    var at = document.getElementById('logActorType').value; if (at !== 'all') p.set('actor_type', at);
+    var tg = document.getElementById('logTag').value; if (tg !== 'all') p.set('tag', tg);
+    put('status_class', document.getElementById('logStatus').value);
+    put('ip', document.getElementById('logIp').value.trim());
+    put('from_ts', document.getElementById('logFrom').value.replace('T', ' '));
+    put('to_ts', document.getElementById('logTo').value.replace('T', ' '));
+    put('min_latency', document.getElementById('logMinLatency').value);
+    if (document.getElementById('logErrorsOnly').checked) p.set('errors_only', 'true');
+    if (document.getElementById('logIncludePanel').checked) {
+        p.set('exclude_panel', 'false');
+        p.set('exclude_admin', 'false');
+    }
+    put('offset', offset || 0);
+    p.set('limit', 100);
+    return p;
+}
+
+async function fetchLogs(append) {
+    try {
+        var res = await fetch('/admin/api/logs?' + logParams(append ? allLogs.length : 0).toString());
+        if (res.status === 401) { window.location.href = '/admin/login'; return; }
+        var data = await res.json();
+        logsTotal = data.total || 0;
+        allLogs = append ? allLogs.concat(data.rows || []) : (data.rows || []);
+        var c = document.getElementById('countLogs'); if (c) c.innerText = logsTotal;
+        renderLogs();
+    } catch (e) { }
+}
+
+async function fetchLogsStats() {
+    try {
+        var inc = document.getElementById('logIncludePanel');
+        var res = await fetch('/admin/api/logs/stats?hours=24&exclude_admin='
+            + (inc && inc.checked ? 'false' : 'true'));
+        if (!res.ok) return;
+        var s = await res.json();
+        document.getElementById('statLogsTotal').innerText = s.total;
+        document.getElementById('statLogsGuests').innerText = s.guests;
+        document.getElementById('statLogsUsers').innerText = s.users;
+        document.getElementById('statLogsApi').innerText = s.api;
+        document.getElementById('statLogsErrors').innerText = s.err4xx + ' / ' + s.err5xx;
+        document.getElementById('statLogsLatency').innerText = Math.round(s.avg_ms) + ' / ' + Math.round(s.p95_ms) + ' ms';
+        document.getElementById('logsTopIps').innerText = 'Top IP : ' + (s.top_ips || []).slice(0, 5).map(function (x) { return x.ip + ' (' + x.count + ')'; }).join('  .  ');
+    } catch (e) { }
+}
+
+function renderLogs() {
+    var tb = document.getElementById('logsTableBody');
+    if (!tb) return;
+    document.getElementById('logsCountLabel').innerText = allLogs.length + ' affiches / ' + logsTotal + ' au total';
+    document.getElementById('logsMoreBtn').classList.toggle('hidden', allLogs.length >= logsTotal);
+    if (!allLogs.length) { tb.innerHTML = '<tr><td colspan="9" class="px-3 py-8 text-center text-slate-500">Aucun log pour ces filtres</td></tr>'; return; }
+    tb.innerHTML = allLogs.map(function (l, i) {
+        return '<tr class="hover:bg-slate-800/40 cursor-pointer" onclick="openLogDetail(' + i + ')">' +
+            '<td class="px-3 py-2 whitespace-nowrap text-slate-400">' + _esc(_ts(l.ts)) + '</td>' +
+            '<td class="px-3 py-2 whitespace-nowrap" onclick="event.stopPropagation(); openActorAt(' + i + ')">' + _badge(l.actor_type) +
+            '<div class="text-[10px] text-slate-400 mt-0.5 truncate max-w-[170px]">' + _esc(l.actor_label || l.actor_id) + '</div></td>' +
+            '<td class="px-3 py-2 whitespace-nowrap text-slate-300">' + _esc(l.ip) + '</td>' +
+            '<td class="px-3 py-2 whitespace-nowrap font-bold text-slate-400">' + _esc(l.method) + '</td>' +
+            '<td class="px-3 py-2 truncate max-w-[300px]" title="' + _esc(l.path) + '">' + _esc(l.path) +
+            (l.query ? '<span class="text-slate-500">?' + _esc(String(l.query).slice(0, 50)) + '</span>' : '') + '</td>' +
+            '<td class="px-3 py-2 font-bold ' + _stCls(l.status) + '">' + l.status + '</td>' +
+            '<td class="px-3 py-2 ' + _latCls(l.latency_ms) + '">' + l.latency_ms + ' ms</td>' +
+            '<td class="px-3 py-2 text-[10px] text-slate-500">' + _esc(l.tag) + '</td>' +
+            '<td class="px-3 py-2 truncate max-w-[160px] text-slate-500" title="' + _esc(l.user_agent) + '">' + _esc(l.user_agent) + '</td></tr>';
+    }).join('');
+}
+
+function loadMoreLogs() { fetchLogs(true); }
+
+function resetLogFilters() {
+    ['logSearch', 'logIp', 'logMinLatency', 'logFrom', 'logTo'].forEach(function (id) { document.getElementById(id).value = ''; });
+    document.getElementById('logActorType').value = 'all';
+    document.getElementById('logTag').value = 'all';
+    document.getElementById('logStatus').value = '';
+    document.getElementById('logErrorsOnly').checked = false;
+    document.getElementById('logIncludePanel').checked = false;
+    fetchLogs();
+}
+
+function toggleLogsLive() {
+    logsLive = !logsLive;
+    var btn = document.getElementById('logLiveBtn');
+    btn.innerHTML = '<i class="fa-solid fa-circle-' + (logsLive ? 'pause' : 'play') + '"></i> Live : ' + (logsLive ? 'ON' : 'OFF');
+    btn.className = 'px-3 py-2 rounded-lg text-xs font-semibold border ' + (logsLive ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-800 text-slate-300 border-slate-700');
+    if (logsTimer) { clearInterval(logsTimer); logsTimer = null; }
+    if (logsLive) logsTimer = setInterval(function () { fetchLogs(); fetchLogsStats(); }, 3000);
+}
+
+function exportLogs() { window.location = '/admin/api/logs/export.csv?' + logParams(0).toString(); }
+
+function openLogDetail(i) {
+    var l = allLogs[i]; if (!l) return;
+    function kv(k, v, cls) {
+        return '<div class="flex gap-3 border-b border-slate-800/60 py-1.5"><span class="w-32 shrink-0 text-slate-500">' + k +
+            '</span><span class="flex-1 break-all ' + (cls || 'text-slate-200') + '">' + _esc(v || '-') + '</span></div>';
+    }
+    var meta = l.meta; try { meta = JSON.stringify(JSON.parse(l.meta), null, 2); } catch (e) { }
+    document.getElementById('logDetailBody').innerHTML =
+        '<div class="flex flex-wrap gap-2 items-center mb-2">' + _badge(l.actor_type) +
+        '<span class="text-[11px] text-slate-400">' + _esc(l.actor_label || l.actor_id) + '</span>' +
+        '<button onclick="openActor(\'' + l.actor_type + '\',\'' + l.actor_id + '\')" class="ml-auto px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[11px] font-semibold"><i class="fa-solid fa-id-badge mr-1"></i>Voir le profil</button></div>' +
+        kv('Horodatage', _ts(l.ts)) + kv('Acteur', l.actor_type + ' / ' + l.actor_id) + kv('Session (ref)', l.session_ref) +
+        kv('IP', l.ip) + kv('Requete', l.method + ' ' + l.path + (l.query ? '?' + l.query : '')) + kv('Route', l.route) +
+        kv('Statut', l.status, _stCls(l.status)) + kv('Latence', l.latency_ms + ' ms', _latCls(l.latency_ms)) +
+        kv('Tag', l.tag) + kv('Request ID', l.request_id) + kv('Referer', l.referer) + kv('User-Agent', l.user_agent) +
+        kv('Erreur', l.error, 'text-red-400') +
+        '<div class="pt-3 text-slate-500">Meta</div><pre class="bg-dark border border-slate-800 rounded-lg p-3 text-[11px] text-emerald-300 overflow-x-auto">' + _esc(meta) + '</pre>';
+    document.getElementById('logDetailModal').classList.remove('hidden');
+}
+
+function openActorAt(i) { var l = allLogs[i]; if (l) openActor(l.actor_type, l.actor_id); }
+
+async function openActor(type, id) {
+    var body = document.getElementById('actorBody');
+    body.innerHTML = '<div class="text-slate-400">Chargement...</div>';
+    document.getElementById('actorModal').classList.remove('hidden');
+    try {
+        var res = await fetch('/admin/api/actors/' + encodeURIComponent(type) + '/' + encodeURIComponent(id));
+        if (!res.ok) { body.innerHTML = '<div class="text-red-400">Profil introuvable</div>'; return; }
+        var p = await res.json();
+        var e = p.entity || {};
+        function row(k, v, cls) {
+            return '<div class="flex gap-3 border-b border-slate-800/60 py-1.5"><span class="w-40 shrink-0 text-slate-500">' + k +
+                '</span><span class="flex-1 break-all ' + (cls || 'text-slate-200') + '">' + _esc(v === null || v === undefined ? '-' : v) + '</span></div>';
+        }
+        var ident = row('Type', 'Visiteur anonyme');
+        if (e.kind === 'user') {
+            ident = row('Email', e.email) + row('Plan', e.plan) +
+                row('Statut', e.is_active ? 'Actif' : 'BANNI', e.is_active ? 'text-emerald-400' : 'text-red-400') +
+                row('Inscrit le', e.created_at) + row('Cle API liee', e.api_key_id);
+        }
+        if (e.kind === 'api_key') {
+            ident = row('Libelle', e.label) + row('Proprietaire', e.owner_email) + row('Plan', e.plan) +
+                row('Statut', e.is_active ? 'Active' : 'Revoquee') + row('Creee le', e.created_at);
+        }
+        var html = '';
+        html += '<div class="flex flex-wrap gap-2 items-center">' + _badge(type) + '<span class="font-mono text-[11px] text-slate-400">' + _esc(id) + '</span></div>';
+        html += '<div class="grid md:grid-cols-2 gap-4"><div><div class="text-slate-500 mb-1">Identite</div>' + ident + row('Quota utilise aujourd hui', p.quota_used_today) + '</div>';
+        html += '<div><div class="text-slate-500 mb-1">Comportement</div>' + row('Requetes (30j)', p.hits) +
+            row('Premiere vue', _ts(p.first_seen)) + row('Derniere vue', _ts(p.last_seen)) +
+            row('Latence moy / max', Math.round(p.avg_latency) + ' / ' + p.max_latency + ' ms') +
+            row('Erreurs 4xx / 429 / 5xx', p.err4xx + ' / ' + p.err429 + ' / ' + p.err5xx) +
+            row('IP distinctes', p.unique_ips) + row('User-agents distincts', p.unique_agents) + '</div></div>';
+        html += '<div><div class="text-slate-500 mb-1">Adresses IP</div><div class="flex flex-wrap gap-2">' +
+            ((p.ips || []).map(function (x) { return '<span class="px-2 py-1 rounded-lg bg-dark border border-slate-800 font-mono text-[11px] text-slate-300">' + _esc(x.ip) + ' <span class="text-slate-500">x' + x.count + '</span></span>'; }).join('') || '-') + '</div></div>';
+        html += '<div><div class="text-slate-500 mb-1">Dernieres recherches</div><div class="flex flex-wrap gap-2">' +
+            ((p.recent_searches || []).slice(0, 12).map(function (s) { return '<span class="px-2 py-1 rounded-lg bg-emerald-600/10 border border-emerald-800/40 font-mono text-[11px] text-emerald-300">' + _esc(s) + '</span>'; }).join('') || '-') + '</div></div>';
+        html += '<div><div class="text-slate-500 mb-1">Endpoints les plus appeles</div><div class="space-y-1">' +
+            ((p.top_paths || []).slice(0, 8).map(function (x) { return '<div class="flex justify-between font-mono text-[11px]"><span class="text-slate-300 truncate">' + _esc(x.path) + '</span><span class="text-slate-500">' + x.count + '</span></div>'; }).join('')) + '</div></div>';
+        html += '<div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800">' +
+            '<button onclick="filterByActor(\'' + type + '\',\'' + id + '\')" class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-semibold"><i class="fa-solid fa-list mr-1"></i>Voir tous ses logs</button>' +
+            '<button onclick="actorResetQuota(\'' + type + '\',\'' + id + '\')" class="px-3 py-2 rounded-lg bg-amber-600 text-white text-[11px] font-semibold"><i class="fa-solid fa-rotate mr-1"></i>Reset quota</button>' +
+            (e.kind === 'user' ? '<button onclick="actorToggleBan(\'' + id + '\')" class="px-3 py-2 rounded-lg ' + (e.is_active ? 'bg-red-600' : 'bg-emerald-600') + ' text-white text-[11px] font-semibold"><i class="fa-solid fa-ban mr-1"></i>' + (e.is_active ? 'Bannir' : 'Reactiver') + '</button>' : '') + '</div>';
+        html += '<div><div class="text-slate-500 mb-1">Journal recent</div><div class="space-y-1 font-mono text-[10px] max-h-52 overflow-y-auto custom-scroll">' +
+            ((p.recent_logs || []).map(function (r) { return '<div class="flex gap-2 ' + _stCls(r.status) + '"><span class="text-slate-500">' + _esc(_ts(r.ts)) + '</span><span class="text-slate-400">' + _esc(r.method) + '</span><span class="flex-1 truncate text-slate-300">' + _esc(r.path) + '</span><span>' + r.status + '</span><span class="text-slate-500">' + r.latency_ms + 'ms</span></div>'; }).join('')) + '</div></div>';
+        body.innerHTML = html;
+    } catch (err) { body.innerHTML = '<div class="text-red-400">Erreur de chargement</div>'; }
+}
+
+function filterByActor(type, id) {
+    document.getElementById('logActorType').value = type;
+    document.getElementById('logIp').value = (type === 'guest' || type === 'bot') ? id : '';
+    document.getElementById('logSearch').value = (type === 'user' || type === 'api') ? id : '';
+    document.getElementById('actorModal').classList.add('hidden');
+    fetchLogs();
+}
+
+async function actorResetQuota(type, id) { await fetch('/admin/api/actors/' + type + '/' + id + '/reset-quota', { method: 'POST' }); openActor(type, id); }
+async function actorToggleBan(id) { await fetch('/admin/api/users/' + id + '/status', { method: 'PATCH' }); openActor('user', id); if (typeof fetchUsers === 'function') fetchUsers(); }
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+        var a = document.getElementById('logDetailModal'); if (a) a.classList.add('hidden');
+        var b = document.getElementById('actorModal'); if (b) b.classList.add('hidden');
+    }
+});
+
+/* ---------------------- injection ---------------------- */
+function injectLogsUI() {
+    var ref = document.getElementById('tabBtnUsers');
+    if (!ref || document.getElementById('tabBtnLogs')) return;
+
+    var btn = document.createElement('button');
+    btn.id = 'tabBtnLogs';
+    btn.setAttribute('onclick', "switchMainTab('logs')");
+    btn.className = 'px-4 py-2 rounded-xl bg-surface hover:bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-2 border border-slate-800';
+    btn.innerHTML = '<i class="fa-solid fa-wave-square"></i> <span>Logs Globaux (<span id="countLogs">0</span>)</span>';
+    ref.insertAdjacentElement('afterend', btn);
+
+    var host = document.getElementById('tabContentUsers')
+        ? document.getElementById('tabContentUsers').parentElement
+        : document.body;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = LOGS_SECTION + LOGS_MODALS;
+    while (wrap.firstChild) host.appendChild(wrap.firstChild);
+}
+
+injectLogsUI();
