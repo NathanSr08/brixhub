@@ -13,7 +13,8 @@ import time
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import Request
+from fastapi import HTTPException, Request
+from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.db.clickhouse import get_ch, get_redis
@@ -282,7 +283,13 @@ async def audit_middleware(request: Request, call_next):
 
     exc_caught, err, status = None, "", 200
     try:
-        response = await call_next(request)
+        try:
+            from app.core import access
+            await access.check(request)
+            response = await call_next(request)
+        except HTTPException as _exc:
+            request.state.audit_error = _exc.detail
+            response = JSONResponse({"detail": _exc.detail}, status_code=_exc.status_code)
         status = response.status_code
     except Exception as e:
         exc_caught = e

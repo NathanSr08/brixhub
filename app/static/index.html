@@ -966,14 +966,14 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    alert(data.message);
+                    bxAlerte(data.message);
                     closeAccountModal();
                     await checkAuthSession();
                 } else {
-                    alert(data.detail || 'Clé invalide ou inactive');
+                    bxAlerte(data.detail || 'Clé invalide ou inactive');
                 }
             } catch (err) {
-                alert('Erreur réseau');
+                bxAlerte('Erreur réseau');
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Lier cette clé et débloquer l\'illimité';
@@ -1118,7 +1118,7 @@
             if (banner) banner.style.display = 'none';
 
             if (!params.toString()) {
-                alert("Veuillez renseigner au moins un critère de recherche.");
+                bxAlerte("Veuillez renseigner au moins un critère de recherche.");
                 return;
             }
 
@@ -1178,7 +1178,7 @@
 
                 if (res.status === 403) {
                     if (loadingEl) loadingEl.classList.add('hidden');
-                    alert("Compte suspendu ou accès non autorisé.");
+                    /* gere par correlation-ux.js (message selon le motif) */
                     return;
                 }
 
@@ -1386,5 +1386,6 @@
 <script src="/static/dynamic-config.js?v=10"></script>
 <script src="/static/quota-badge.js?v=1"></script>
 <script src="/static/plan-cta.js?v=10"></script>
+<script src="/static/correlation-ux.js?v=1"></script>
 </body>
 </html>

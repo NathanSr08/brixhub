@@ -24,6 +24,7 @@ from app.db import bootstrap
 from app.api.admin_logs import router as admin_logs_router
 from app.api.admin_pricing import router as pricing_router, public_router as config_router
 from app.api.admin_web_access import router as admin_web_access_router
+from app.api.admin_access import router as admin_access_router
 from starlette.concurrency import run_in_threadpool
 
 @asynccontextmanager
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_logs_router)
     app.include_router(pricing_router)
     app.include_router(admin_web_access_router)
+    app.include_router(admin_access_router)
     app.include_router(config_router)
 
 
@@ -84,21 +86,16 @@ async def serve_reset_password():
     return FileResponse(str(STATIC_DIR / "reset-password.html"))
 
 @app.get("/", response_class=FileResponse)
-async def serve_index(response: Response):
-    s = get_settings()
-    sig = hmac.new(s.admin_token.encode(), b"brixhub_internal_web_session", hashlib.sha256).hexdigest()
-    res = FileResponse(str(STATIC_DIR / "index.html"))
-    res.set_cookie(
-        key="bx_web_session",
-        value=sig,
-        httponly=True,
-        samesite="lax",
-        secure=False
-    )
-    return res
+async def serve_index(request: Request):
+    from app.core import maintenance
+    if maintenance.blocking(request):
+        return FileResponse(str(STATIC_DIR / "maintenance.html"))
+    resp = FileResponse(str(STATIC_DIR / "index.html"))
+    tok = os.getenv("ADMIN_TOKEN", "")
+    if tok and request.query_params.get("bypass") == tok:
+        resp.set_cookie("bx_bypass", tok, max_age=43200, httponly=True, samesite="lax")
+    return resp
 
-# --- TRACKER UTILISATEURS EN LIGNE (WEBSOCKET) ---
-connected_websockets = set()
 
 @app.websocket("/ws/online")
 async def ws_online_tracker(websocket: WebSocket):

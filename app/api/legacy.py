@@ -65,6 +65,10 @@ async def web_search(
     source: str | None = None,
     limit: int = 50,
 ):
+    from app.core import maintenance
+    if maintenance.blocking(request):
+        request.state.audit_error = "MAINTENANCE"
+        raise HTTPException(status_code=503, detail="MAINTENANCE")
     r = get_redis()
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
 
@@ -227,3 +231,33 @@ async def web_correlations(
         tel=tel, mail=mail, code_postal=code_postal,
         adresse=adresse, source=source
     )
+
+@router.get("/access/me")
+async def access_me(request: Request):
+    """Ce que ce visiteur a le droit de faire (utilise par la page publique)."""
+    from app.core import access
+    regles = access._applicables(access.ip_client(request),
+                                 access.cle_api(request),
+                                 await access.utilisateur(request))
+    bloque = any(r["bloque"] for _, _, r in regles)
+    autorises, refuses = [], []
+    for _, _, r in regles:
+        autorises += access._motifs(r["autorise"])
+        refuses += access._motifs(r["refuse"])
+
+    def permis(chemin):
+        if refuses and any(access._correspond(m, chemin) for m in refuses):
+            return False
+        if autorises and not any(access._correspond(m, chemin) for m in autorises):
+            return False
+        return True
+
+    return {
+        "bloque": bloque,
+        "fonctions": {
+            "recherche": permis("/api/search"),
+            "correlation": permis("/api/correlations"),
+            "sources": permis("/api/sources"),
+            "stats": permis("/api/stats"),
+        },
+    }

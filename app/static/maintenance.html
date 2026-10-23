@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance - BrixHub</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{dark:'#0a0d14',surface:'#121824'}}}}</script>
+<style>
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .floaty { animation: float 3.5s ease-in-out infinite; }
+  .grid-bg { background-image:
+    linear-gradient(rgba(59,130,246,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,.06) 1px, transparent 1px);
+    background-size: 44px 44px; }
+</style>
+</head>
+<body class="bg-dark text-slate-200 min-h-screen flex items-center justify-center p-5 grid-bg">
+
+<div class="w-full max-w-lg">
+  <div class="bg-surface border border-slate-800 rounded-3xl p-8 sm:p-10 text-center shadow-2xl shadow-black/40">
+    <div class="floaty w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/30">
+      <i class="fa-solid fa-screwdriver-wrench text-white text-2xl"></i>
+    </div>
+
+    <h1 class="mt-6 text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Maintenance en cours</h1>
+    <p class="mt-1 text-[11px] uppercase tracking-widest text-blue-400 font-mono">BrixHub OSINT Engine</p>
+
+    <p id="msg" class="mt-5 text-sm text-slate-300 leading-relaxed">
+      BrixHub est en maintenance, revenez dans quelques minutes.
+    </p>
+
+    <div class="mt-6 flex items-center justify-center gap-2 text-xs text-slate-400">
+      <span class="relative flex h-2.5 w-2.5">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+      </span>
+      <span>Nouvelle tentative dans <b id="cd" class="text-slate-200">30</b> s</span>
+    </div>
+
+    <button onclick="location.reload()"
+      class="mt-6 w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition shadow-lg shadow-blue-600/20">
+      <i class="fa-solid fa-rotate-right mr-2"></i>Reessayer maintenant
+    </button>
+
+    <div class="mt-5 pt-5 border-t border-slate-800 flex flex-wrap items-center justify-center gap-4 text-xs">
+      <a href="https://t.me/leackfrench" target="_blank" class="text-slate-400 hover:text-blue-400 transition">
+        <i class="fa-brands fa-telegram mr-1"></i>Contact
+      </a>
+      <a href="/api-docs" class="text-slate-400 hover:text-blue-400 transition">
+        <i class="fa-solid fa-code mr-1"></i>Documentation API
+      </a>
+      <a href="#" onclick="adminBypass();return false" class="text-slate-500 hover:text-slate-300 transition">
+        <i class="fa-solid fa-user-shield mr-1"></i>Acces admin
+      </a>
+    </div>
+  </div>
+
+  <p class="mt-4 text-center text-[11px] text-slate-600">&copy; 2026 BrixHub OSINT Engine</p>
+</div>
+
+<script>
+  // message dynamique depuis la config
+  fetch('/api/config', { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (c) { if (c && c.maintenance_text) document.getElementById('msg').textContent = c.maintenance_text; })
+    .catch(function () {});
+
+  // decompte + rechargement auto
+  var left = 30, el = document.getElementById('cd');
+  setInterval(function () {
+    left--;
+    if (left <= 0) { location.reload(); return; }
+    el.textContent = left;
+  }, 1000);
+
+  function adminBypass() {
+    var t = prompt('Token admin (ADMIN_TOKEN) :');
+    if (t) location.href = '/?bypass=' + encodeURIComponent(t.trim());
+  }
+</script>
+</body>
+</html>
